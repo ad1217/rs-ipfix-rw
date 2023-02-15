@@ -1,4 +1,4 @@
-//! Read-write implementation of the IPFIX Protocol, see <https://www.rfc-editor.org/rfc/rfc5101>
+//! Read-write implementation of the IPFIX Protocol, see <https://www.rfc-editor.org/rfc/rfc7011>
 
 use std::{
     cell::RefCell,
@@ -21,6 +21,7 @@ use crate::util::{until_limit, WriteSize};
 // TODO: add support for option templates
 pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 
+/// <https://www.rfc-editor.org/rfc/rfc7011#section-3.1>
 #[binrw]
 #[brw(big, magic = 10u16)]
 #[brw(import( templates: Templates, formatter: Rc<Formatter>))]
@@ -77,7 +78,7 @@ impl Message {
     }
 }
 
-/// <https://www.rfc-editor.org/rfc/rfc5101#section-3.3>
+/// <https://www.rfc-editor.org/rfc/rfc7011#section-3.3>
 #[binrw]
 #[brw(big, import( templates: Templates, formatter: Rc<Formatter> ))]
 #[derive(PartialEq, Debug)]
@@ -103,6 +104,7 @@ impl WriteSize for Set {
     }
 }
 
+/// <https://www.rfc-editor.org/rfc/rfc7011.html#section-3.4>
 #[binrw]
 #[brw(big)]
 #[br(import ( set_id: u16, length: u16, templates: Templates, formatter: Rc<Formatter> ))]
@@ -157,6 +159,7 @@ impl WriteSize for Records {
     }
 }
 
+/// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.1>
 #[binrw]
 #[brw(big)]
 #[derive(PartialEq, Debug)]
@@ -178,6 +181,7 @@ impl WriteSize for TemplateRecord {
     }
 }
 
+/// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.2>
 #[binrw]
 #[brw(big)]
 #[derive(PartialEq, Debug)]
@@ -201,7 +205,7 @@ impl WriteSize for OptionsTemplateRecord {
     }
 }
 
-/// <https://www.rfc-editor.org/rfc/rfc5101#section-3.2>
+/// <https://www.rfc-editor.org/rfc/rfc7011#section-3.2>
 #[binrw]
 #[brw(big)]
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -247,6 +251,7 @@ impl WriteSize for FieldSpecifier {
     }
 }
 
+/// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.3>
 #[derive(PartialEq, Debug)]
 pub struct DataRecord {
     pub values: HashMap<DataRecordKey, DataRecordValue>,
