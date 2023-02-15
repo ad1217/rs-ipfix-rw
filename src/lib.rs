@@ -223,7 +223,7 @@ impl FieldSpecifier {
             .get(&(self.enterprise_number.unwrap_or(0)))
             .and_then(|ent| ent.get(&self.information_element_identifier))
         {
-            Some((name, ty)) => (DataRecordKey::Str(name.to_string()), &ty),
+            Some((name, ty)) => (DataRecordKey::Str((*name).into()), ty),
             None => (
                 DataRecordKey::Unrecognized(self.clone()),
                 // TODO: this is probably not technically correct
