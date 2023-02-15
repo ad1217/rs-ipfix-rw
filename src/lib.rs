@@ -28,7 +28,7 @@ pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 pub struct Message {
     #[br(temp)]
     #[bw(try_calc = self.write_size((templates.clone(), formatter.clone())))]
-    pub length: u16,
+    length: u16,
     pub export_time: u32,
     pub sequence_number: u32,
     pub observation_domain_id: u32,
@@ -88,7 +88,7 @@ pub struct Set {
     #[br(temp)]
     #[br(assert(length > 4))]
     #[bw(try_calc = self.write_size((templates.clone(), formatter.clone())))]
-    pub length: u16,
+    length: u16,
     // TODO: padding
     #[br(args(set_id, length - 4, templates, formatter))]
     #[bw(args(templates, formatter))]
@@ -167,7 +167,7 @@ pub struct TemplateRecord {
     pub template_id: u16,
     #[br(temp)]
     #[bw(try_calc = field_specifiers.len().try_into())]
-    pub field_count: u16,
+    field_count: u16,
     #[br(count = field_count)]
     pub field_specifiers: Vec<FieldSpecifier>,
 }
@@ -188,7 +188,7 @@ pub struct OptionsTemplateRecord {
     pub template_id: u16,
     #[br(temp)]
     #[bw(try_calc = field_specifiers.len().try_into())]
-    pub field_count: u16,
+    field_count: u16,
     // TODO
     pub scope_field_count: u16,
     #[br(count = field_count)]
@@ -210,7 +210,7 @@ impl WriteSize for OptionsTemplateRecord {
 pub struct FieldSpecifier {
     #[br(temp)]
     #[bw(calc = information_element_identifier | (u16::from(enterprise_number.is_some()) << 15))]
-    pub raw_information_element_identifier: u16,
+    raw_information_element_identifier: u16,
     #[br(calc = raw_information_element_identifier & (u16::MAX >> 1))]
     #[bw(ignore)]
     pub information_element_identifier: u16,
