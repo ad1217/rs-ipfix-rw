@@ -7,8 +7,11 @@ use std::{
 };
 
 use ahash::{HashMap, HashMapExt};
-use binrw::io::{Read, Seek, Write};
-use binrw::{binrw, until_eof, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, Endian};
+use binrw::{
+    binrw, binwrite, count,
+    io::{Read, Seek, Write},
+    until_eof, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, Endian,
+};
 
 pub mod properties;
 mod util;
@@ -267,17 +270,8 @@ impl BinRead for DataRecord {
         for field_spec in template.iter() {
             // TODO: should read whole field length according to template, regardless of type
             let (key, ty) = field_spec.key_and_type(&formatter);
-            let value = reader
-                .read_type_args(endian, (*ty, field_spec.field_length))
-                .map_err(|e| match e {
-                    // Workaround for until_eof requiring all enum match errors to be eof
-                    binrw::Error::EnumErrors { variant_errors, .. }
-                        if variant_errors.iter().any(|(_, err)| err.is_eof()) =>
-                    {
-                        binrw::Error::Io(std::io::ErrorKind::UnexpectedEof.into())
-                    }
-                    e => e,
-                })?;
+            let value = reader.read_type_args(endian, (*ty, field_spec.field_length))?;
+
             values.insert(key, value);
         }
         Ok(Self { values })
@@ -373,91 +367,139 @@ pub enum DataRecordType {
     Ipv6Addr,
 }
 
-#[binrw]
-#[brw(big)]
-#[br(import( ty: DataRecordType, length: u16 ))]
+#[binwrite]
+#[bw(big)]
 #[bw(import( length: u16 ))]
 #[derive(PartialEq, Debug)]
 pub enum DataRecordValue {
-    // TODO: length shouldn't actually change the data type, technically
-    #[br(pre_assert(ty == DataRecordType::UnsignedInt && length == 1))]
     U8(u8),
-    #[br(pre_assert(ty == DataRecordType::UnsignedInt && length == 2))]
     U16(u16),
-    #[br(pre_assert(ty == DataRecordType::UnsignedInt && length == 4))]
     U32(u32),
-    #[br(pre_assert(ty == DataRecordType::UnsignedInt && length == 8))]
     U64(u64),
-    #[br(pre_assert(ty == DataRecordType::SignedInt && length == 1))]
     I8(i8),
-    #[br(pre_assert(ty == DataRecordType::SignedInt && length == 2))]
     I16(i16),
-    #[br(pre_assert(ty == DataRecordType::SignedInt && length == 4))]
     I32(i32),
-    #[br(pre_assert(ty == DataRecordType::SignedInt && length == 8))]
     I64(i64),
-    #[br(pre_assert(ty == DataRecordType::Float && length == 4))]
     F32(f32),
-    #[br(pre_assert(ty == DataRecordType::Float && length == 8))]
     F64(f64),
-    #[br(pre_assert(ty == DataRecordType::Bool && length == 1))]
-    Bool(
-        // TODO: technically 1=>true, 2=>false, others undefined
-        #[br(map = |x: u8| x == 1)]
-        #[bw(map = |&x| -> u8 {if x {1} else {2} })]
-        bool,
-    ),
+    Bool(#[bw(map = |&x| -> u8 {if x {1} else {2} })] bool),
 
-    #[br(pre_assert(ty == DataRecordType::MacAddress && length == 6))]
     MacAddress([u8; 6]),
 
     // TODO: same logic as variable length string
-    #[br(pre_assert(ty == DataRecordType::Bytes))]
     Bytes(
-        #[br(temp, if(length == u16::MAX))]
         #[bw(if(length == u16::MAX), calc = if self_2.len() < 255 { self_2.len() as u8 } else { 255 })]
-        u8,
-        #[br(temp, if(length == u16::MAX && self_0 == 255))]
+         u8,
         #[bw(if(length == u16::MAX && self_2.len() >= 255), try_calc = self_2.len().try_into())]
         u16,
-        #[br(count = if length == u16::MAX { if self_0 == 255 { self_1 }  else { self_0.into() } } else { length })]
-         Vec<u8>,
+        Vec<u8>,
     ),
-    #[br(pre_assert(ty == DataRecordType::String))]
     String(
-        #[br(temp, if(length == u16::MAX))]
         #[bw(if(length == u16::MAX), calc = if self_2.len() < 255 { self_2.len() as u8 } else { 255 })]
-        u8,
-        #[br(temp, if(length == u16::MAX && self_0 == 255))]
+         u8,
         #[bw(if(length == u16::MAX && self_2.len() >= 255), try_calc = self_2.len().try_into())]
         u16,
-        #[br(count = if length == u16::MAX { if self_0 == 255 { self_1 }  else { self_0.into() } } else { length })]
-        #[br(try_map = String::from_utf8)]
-        #[bw(map = |x| x.as_bytes())]
-        String,
+        #[bw(map = |x| x.as_bytes())] String,
     ),
 
-    #[br(pre_assert(ty == DataRecordType::DateTimeSeconds && length == 4))]
     DateTimeSeconds(u32),
-    #[br(pre_assert(ty == DataRecordType::DateTimeMilliseconds && length == 8))]
     DateTimeMilliseconds(u64),
-    #[br(pre_assert(ty == DataRecordType::DateTimeMicroseconds && length == 8))]
     DateTimeMicroseconds(u64),
-    #[br(pre_assert(ty == DataRecordType::DateTimeNanoseconds && length == 8))]
     DateTimeNanoseconds(u64),
 
-    #[br(pre_assert(ty == DataRecordType::Ipv4Addr && length == 4))]
-    Ipv4Addr(
-        #[br(map = |x: u32| x.into())]
-        #[bw(map = |&x| -> u32 {x.into()})]
-        Ipv4Addr,
-    ),
-    #[br(pre_assert(ty == DataRecordType::Ipv6Addr && length == 16))]
-    Ipv6Addr(
-        #[br(map = |x: u128| x.into())]
-        #[bw(map = |&x| -> u128 {x.into()})]
-        Ipv6Addr,
-    ),
+    Ipv4Addr(#[bw(map = |&x| -> u32 {x.into()})] Ipv4Addr),
+    Ipv6Addr(#[bw(map = |&x| -> u128 {x.into()})] Ipv6Addr),
+}
+
+fn read_variable_length<R: Read + Seek>(
+    reader: &mut R,
+    endian: Endian,
+    length: u16,
+) -> BinResult<Vec<u8>> {
+    let actual_length = if length == u16::MAX {
+        let var_length: u8 = reader.read_type(endian)?;
+        if var_length == 255 {
+            let var_length_ext: u16 = reader.read_type(endian)?;
+            var_length_ext
+        } else {
+            var_length.into()
+        }
+    } else {
+        length
+    };
+    count(actual_length.into())(reader, endian, ())
+}
+
+impl BinRead for DataRecordValue {
+    type Args<'a> = (DataRecordType, u16);
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        endian: Endian,
+        (ty, length): Self::Args<'_>,
+    ) -> BinResult<Self> {
+        // TODO: length shouldn't actually change the data type, technically
+        Ok(match (ty, length) {
+            (DataRecordType::UnsignedInt, 1) => DataRecordValue::U8(reader.read_type(endian)?),
+            (DataRecordType::UnsignedInt, 2) => DataRecordValue::U16(reader.read_type(endian)?),
+            (DataRecordType::UnsignedInt, 4) => DataRecordValue::U32(reader.read_type(endian)?),
+            (DataRecordType::UnsignedInt, 8) => DataRecordValue::U64(reader.read_type(endian)?),
+            (DataRecordType::SignedInt, 1) => DataRecordValue::I8(reader.read_type(endian)?),
+            (DataRecordType::SignedInt, 2) => DataRecordValue::I16(reader.read_type(endian)?),
+            (DataRecordType::SignedInt, 4) => DataRecordValue::I32(reader.read_type(endian)?),
+            (DataRecordType::SignedInt, 8) => DataRecordValue::I64(reader.read_type(endian)?),
+            (DataRecordType::Float, 4) => DataRecordValue::F32(reader.read_type(endian)?),
+            (DataRecordType::Float, 8) => DataRecordValue::F64(reader.read_type(endian)?),
+            // TODO: technically 1=>true, 2=>false, others undefined
+            (DataRecordType::Bool, 1) => DataRecordValue::Bool(u8::read(reader).map(|x| x == 1)?),
+            (DataRecordType::MacAddress, 6) => {
+                DataRecordValue::MacAddress(reader.read_type(endian)?)
+            }
+
+            (DataRecordType::Bytes, _) => {
+                DataRecordValue::Bytes(read_variable_length(reader, endian, length)?)
+            }
+            (DataRecordType::String, _) => DataRecordValue::String(
+                match String::from_utf8(read_variable_length(reader, endian, length)?) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(binrw::Error::Custom {
+                            pos: reader.stream_position()?,
+                            err: Box::new(e),
+                        });
+                    }
+                },
+            ),
+
+            (DataRecordType::DateTimeSeconds, 4) => {
+                DataRecordValue::DateTimeSeconds(reader.read_type(endian)?)
+            }
+
+            (DataRecordType::DateTimeMilliseconds, 8) => {
+                DataRecordValue::DateTimeMilliseconds(reader.read_type(endian)?)
+            }
+
+            (DataRecordType::DateTimeMicroseconds, 8) => {
+                DataRecordValue::DateTimeMicroseconds(reader.read_type(endian)?)
+            }
+
+            (DataRecordType::DateTimeNanoseconds, 8) => {
+                DataRecordValue::DateTimeNanoseconds(reader.read_type(endian)?)
+            }
+
+            (DataRecordType::Ipv4Addr, 4) => {
+                DataRecordValue::Ipv4Addr(u32::read_be(reader)?.into())
+            }
+
+            (DataRecordType::Ipv6Addr, 16) => {
+                DataRecordValue::Ipv6Addr(u128::read_be(reader)?.into())
+            }
+            _ => Err(binrw::Error::AssertFail {
+                pos: reader.stream_position()?,
+                message: format!("Invalid type/length pair: {ty:?} {length}"),
+            })?,
+        })
+    }
 }
 
 impl WriteSize for DataRecordValue {
