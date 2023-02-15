@@ -87,7 +87,7 @@ pub struct Set {
     #[bw(calc = records.set_id())]
     set_id: u16,
     #[br(temp)]
-    #[br(assert(length > 4))]
+    #[br(assert(length > 4, "invalid set length: [{length} <= 4]"))]
     #[bw(try_calc = self.write_size((templates.clone(), formatter.clone())))]
     length: u16,
     // TODO: padding
@@ -309,7 +309,7 @@ impl BinWrite for DataRecord {
                 // TODO: better error type?
                 .ok_or(binrw::Error::AssertFail {
                     pos: writer.stream_position()?,
-                    message: "Missing field templated in template".into(),
+                    message: format!("Field in template missing from data [{key:?}]"),
                 })?;
 
             writer.write_type_args(value, endian, (field_spec.field_length,))?;
