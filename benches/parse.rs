@@ -6,7 +6,7 @@ use ahash::{HashMap, HashMapExt};
 use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
 use binrw::BinRead;
 
-use ipfixrw::properties::get_default_enterprise;
+use ipfixrw::properties::get_default_formatter;
 use ipfixrw::Message;
 
 fn parse_data_with_template(bench: &mut Bencher) {
@@ -17,7 +17,7 @@ fn parse_data_with_template(bench: &mut Bencher) {
     let data_bytes = include_bytes!("../tests/parse_data.bin");
 
     let templates = Rc::new(RefCell::new(HashMap::new()));
-    let formatter = Rc::new(get_default_enterprise());
+    let formatter = Rc::new(get_default_formatter());
 
     // parse the template so parsing data can be done
     Message::read_args(
@@ -40,7 +40,7 @@ fn parse_template(bench: &mut Bencher) {
     let template_bytes = include_bytes!("../tests/parse_temp.bin");
 
     let templates = Rc::new(RefCell::new(HashMap::new()));
-    let formatter = Rc::new(get_default_enterprise());
+    let formatter = Rc::new(get_default_formatter());
 
     // parse the template so parsing data can be done
     bench.iter(|| {

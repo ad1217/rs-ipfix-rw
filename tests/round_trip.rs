@@ -7,7 +7,7 @@ mod round_trip_tests {
     use ahash::{HashMap, HashMapExt};
     use binrw::{BinRead, BinWrite};
 
-    use ipfixrw::properties::get_default_enterprise;
+    use ipfixrw::properties::get_default_formatter;
     use ipfixrw::Message;
 
     #[test]
@@ -19,7 +19,7 @@ mod round_trip_tests {
         let data_bytes = include_bytes!("./parse_data.bin");
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
-        let formatter = Rc::new(get_default_enterprise());
+        let formatter = Rc::new(get_default_formatter());
 
         let msg = Message::read_args(
             &mut Cursor::new(template_bytes.as_slice()),

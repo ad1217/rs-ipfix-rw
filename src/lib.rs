@@ -15,7 +15,7 @@ use binrw::{
 
 pub mod properties;
 mod util;
-use crate::properties::EnterpriseFormatter;
+use crate::properties::Formatter;
 use crate::util::{until_limit, WriteSize};
 
 // TODO: add support for option templates
@@ -23,7 +23,7 @@ pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 
 #[binrw]
 #[brw(big, magic = 10u16)]
-#[brw(import( templates: Templates, formatter: Rc<EnterpriseFormatter>))]
+#[brw(import( templates: Templates, formatter: Rc<Formatter>))]
 #[derive(PartialEq, Debug)]
 pub struct Message {
     #[br(temp)]
@@ -38,7 +38,7 @@ pub struct Message {
 }
 
 impl WriteSize for Message {
-    type Arg = (Templates, Rc<EnterpriseFormatter>);
+    type Arg = (Templates, Rc<Formatter>);
 
     fn write_size(&self, arg: Self::Arg) -> Result<u16, String> {
         Ok(16 + self.sets.write_size(arg)?)
@@ -79,7 +79,7 @@ impl Message {
 
 /// <https://www.rfc-editor.org/rfc/rfc5101#section-3.3>
 #[binrw]
-#[brw(big, import( templates: Templates, formatter: Rc<EnterpriseFormatter> ))]
+#[brw(big, import( templates: Templates, formatter: Rc<Formatter> ))]
 #[derive(PartialEq, Debug)]
 pub struct Set {
     #[br(temp)]
@@ -95,7 +95,7 @@ pub struct Set {
 }
 
 impl WriteSize for Set {
-    type Arg = (Templates, Rc<EnterpriseFormatter>);
+    type Arg = (Templates, Rc<Formatter>);
 
     fn write_size(&self, arg: Self::Arg) -> Result<u16, String> {
         Ok(4 + self.records.write_size(arg)?)
@@ -104,8 +104,8 @@ impl WriteSize for Set {
 
 #[binrw]
 #[brw(big)]
-#[br(import ( set_id: u16, length: u16, templates: Templates, formatter: Rc<EnterpriseFormatter> ))]
-#[bw(import ( templates: Templates, formatter: Rc<EnterpriseFormatter> ))]
+#[br(import ( set_id: u16, length: u16, templates: Templates, formatter: Rc<Formatter> ))]
+#[bw(import ( templates: Templates, formatter: Rc<Formatter> ))]
 #[derive(PartialEq, Debug)]
 pub enum Records {
     #[br(pre_assert(set_id == 2))]
@@ -146,7 +146,7 @@ impl Records {
 }
 
 impl WriteSize for Records {
-    type Arg = (Templates, Rc<EnterpriseFormatter>);
+    type Arg = (Templates, Rc<Formatter>);
 
     fn write_size(&self, (templates, formatter): Self::Arg) -> Result<u16, String> {
         match self {
@@ -218,14 +218,11 @@ impl FieldSpecifier {
     /// Look up a DataRecordKey and DataRecordType for this
     /// information element from the formatter. If not present,
     /// returns Unrecognized/Bytes.
-    fn key_and_type<'a>(
-        &self,
-        formatter: &'a EnterpriseFormatter,
-    ) -> (DataRecordKey, &'a DataRecordType) {
-        match formatter
-            .get(&(self.enterprise_number.unwrap_or(0)))
-            .and_then(|ent| ent.get(&self.information_element_identifier))
-        {
+    fn key_and_type<'a>(&self, formatter: &'a Formatter) -> (DataRecordKey, &'a DataRecordType) {
+        match formatter.get(&(
+            self.enterprise_number.unwrap_or(0),
+            self.information_element_identifier,
+        )) {
             Some((name, ty)) => (DataRecordKey::Str((*name).into()), ty),
             None => (
                 DataRecordKey::Unrecognized(self.clone()),
@@ -253,7 +250,7 @@ pub struct DataRecord {
 }
 
 impl BinRead for DataRecord {
-    type Args<'a> = (u16, Templates, Rc<EnterpriseFormatter>);
+    type Args<'a> = (u16, Templates, Rc<Formatter>);
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
@@ -279,7 +276,7 @@ impl BinRead for DataRecord {
 }
 
 impl BinWrite for DataRecord {
-    type Args<'a> = (u16, Templates, Rc<EnterpriseFormatter>);
+    type Args<'a> = (u16, Templates, Rc<Formatter>);
 
     fn write_options<W: Write + Seek>(
         &self,
@@ -314,7 +311,7 @@ impl BinWrite for DataRecord {
 }
 
 impl WriteSize for DataRecord {
-    type Arg = (u16, Templates, Rc<EnterpriseFormatter>);
+    type Arg = (u16, Templates, Rc<Formatter>);
 
     fn write_size(&self, (set_id, templates, formatter): Self::Arg) -> Result<u16, String> {
         let templates = templates.borrow();

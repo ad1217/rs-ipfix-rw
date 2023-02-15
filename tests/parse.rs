@@ -8,7 +8,7 @@ mod parse_tests {
     use ahash::{HashMap, HashMapExt};
     use binrw::BinRead;
 
-    use ipfixrw::properties::get_default_enterprise;
+    use ipfixrw::properties::get_default_formatter;
     use ipfixrw::{DataRecord, DataRecordKey, DataRecordValue, Message};
 
     // shall not cause infinite loop
@@ -18,7 +18,7 @@ mod parse_tests {
         let mut reader = Cursor::new(b.as_slice());
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
-        let formatter = Rc::new(get_default_enterprise());
+        let formatter = Rc::new(get_default_formatter());
 
         let m = Message::read_args(&mut reader, (templates, formatter));
         eprintln!("{m:?}");
@@ -33,7 +33,7 @@ mod parse_tests {
         let data_bytes = include_bytes!("./parse_data.bin");
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
-        let formatter = Rc::new(get_default_enterprise());
+        let formatter = Rc::new(get_default_formatter());
 
         let msg = Message::read_args(
             &mut Cursor::new(template_bytes.as_slice()),
@@ -97,7 +97,7 @@ mod parse_tests {
         let temp_2 = include_bytes!("./parse_temp_2.bin");
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
-        let formatter = Rc::new(get_default_enterprise());
+        let formatter = Rc::new(get_default_formatter());
 
         let _ = Message::read_args(
             &mut Cursor::new(temp_1.as_slice()),
