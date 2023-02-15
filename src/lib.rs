@@ -228,7 +228,7 @@ impl FieldSpecifier {
             self.enterprise_number.unwrap_or(0),
             self.information_element_identifier,
         )) {
-            Some((name, ty)) => (DataRecordKey::Str((*name).into()), ty),
+            Some((name, ty)) => (DataRecordKey::Str(name), ty),
             None => (
                 DataRecordKey::Unrecognized(self.clone()),
                 // TODO: this is probably not technically correct
@@ -347,7 +347,7 @@ impl WriteSize for DataRecord {
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum DataRecordKey {
-    Str(String),
+    Str(&'static str),
     Unrecognized(FieldSpecifier),
     Err(String),
 }

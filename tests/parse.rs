@@ -64,25 +64,25 @@ mod parse_tests {
         assert_eq!(d0.values.len(), 11);
         assert_eq!(
             d0.values
-                .get(&DataRecordKey::Str("sourceIPv4Address".to_string()))
+                .get(&DataRecordKey::Str("sourceIPv4Address"))
                 .unwrap(),
             &DataRecordValue::Ipv4Addr(Ipv4Addr::new(172, 19, 219, 50))
         );
         assert_eq!(
             d0.values
-                .get(&DataRecordKey::Str("flowEndMilliseconds".to_string()))
+                .get(&DataRecordKey::Str("flowEndMilliseconds"))
                 .unwrap(),
             &DataRecordValue::DateTimeMilliseconds(1479840960376)
         );
         assert_eq!(
             d0.values
-                .get(&DataRecordKey::Str("destinationTransportPort".to_string()))
+                .get(&DataRecordKey::Str("destinationTransportPort"))
                 .unwrap(),
             &DataRecordValue::U16(53)
         );
         assert_eq!(
             d0.values
-                .get(&DataRecordKey::Str("protocolIdentifier".to_string()))
+                .get(&DataRecordKey::Str("protocolIdentifier"))
                 .unwrap(),
             &DataRecordValue::U8(17)
         );
@@ -247,10 +247,8 @@ mod parse_tests {
         let record = records[0];
         assert_eq!(record.values.len(), 41);
 
-        if let DataRecordValue::String(query) = record
-            .values
-            .get(&DataRecordKey::Str("DNS_QUERY".into()))
-            .unwrap()
+        if let DataRecordValue::String(query) =
+            record.values.get(&DataRecordKey::Str("DNS_QUERY")).unwrap()
         {
             assert_eq!(query, "asimov.vortex.data.trafficmanager.net");
         }
@@ -266,10 +264,8 @@ mod parse_tests {
         let record = records[0];
         assert_eq!(record.values.len(), 42);
 
-        if let DataRecordValue::String(site) = record
-            .values
-            .get(&DataRecordKey::Str("HTTP_SITE".into()))
-            .unwrap()
+        if let DataRecordValue::String(site) =
+            record.values.get(&DataRecordKey::Str("HTTP_SITE")).unwrap()
         {
             assert_eq!(site, "example.com");
         }
