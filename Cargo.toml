@@ -1,0 +1,19 @@
+[package]
+name = "ipfixrw"
+version = "0.1.0"
+authors = ["Adam Goldsmith <adam@adamgoldsmith.name>"]
+edition = "2021"
+description = "IPFIX reader/writer library"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+binrw = "0.11.1"
+
+[dev-dependencies]
+bencher = "0.1.5"
+
+[[bench]]
+name = "parse"
+harness = false
