@@ -40,8 +40,8 @@ mod parse_tests {
             (templates.clone(), formatter.clone()),
         )
         .unwrap();
-        assert!(msg.sets.len() == 1);
-        assert!(templates.borrow().len() == 3);
+        assert_eq!(msg.sets.len(), 1);
+        assert_eq!(templates.borrow().len(), 3);
         assert!(templates.borrow().contains_key(&500));
         assert!(templates.borrow().contains_key(&999));
         assert!(templates.borrow().contains_key(&501));
@@ -57,34 +57,34 @@ mod parse_tests {
         )
         .unwrap();
         let datarecords: Vec<&DataRecord> = data_message.iter_data_records().collect();
-        assert!(datarecords.len() == 21);
+        assert_eq!(datarecords.len(), 21);
 
         // Assert data records are good
         let d0 = datarecords[0];
-        assert!(d0.values.len() == 11);
-        assert!(
+        assert_eq!(d0.values.len(), 11);
+        assert_eq!(
             d0.values
                 .get(&DataRecordKey::Str("sourceIPv4Address".to_string()))
-                .unwrap()
-                == &DataRecordValue::Ipv4Addr(Ipv4Addr::new(172, 19, 219, 50))
+                .unwrap(),
+            &DataRecordValue::Ipv4Addr(Ipv4Addr::new(172, 19, 219, 50))
         );
-        assert!(
+        assert_eq!(
             d0.values
                 .get(&DataRecordKey::Str("flowEndMilliseconds".to_string()))
-                .unwrap()
-                == &DataRecordValue::DateTimeMilliseconds(1479840960376)
+                .unwrap(),
+            &DataRecordValue::DateTimeMilliseconds(1479840960376)
         );
-        assert!(
+        assert_eq!(
             d0.values
                 .get(&DataRecordKey::Str("destinationTransportPort".to_string()))
-                .unwrap()
-                == &DataRecordValue::U16(53)
+                .unwrap(),
+            &DataRecordValue::U16(53)
         );
-        assert!(
+        assert_eq!(
             d0.values
                 .get(&DataRecordKey::Str("protocolIdentifier".to_string()))
-                .unwrap()
-                == &DataRecordValue::U8(17)
+                .unwrap(),
+            &DataRecordValue::U8(17)
         );
     }
 
@@ -117,7 +117,7 @@ mod parse_tests {
             }
         }
 
-        assert!(enterprise_fields == 122);
+        assert_eq!(enterprise_fields, 122);
     }
 
     // // nprobe -i ens160 -V10 -n localhost:1337 -T "@NTOPNG@"
