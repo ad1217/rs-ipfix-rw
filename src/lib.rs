@@ -86,6 +86,7 @@ pub struct Set {
     #[bw(calc = records.set_id())]
     set_id: u16,
     #[br(temp)]
+    #[br(assert(length > 4))]
     #[bw(try_calc = self.write_size((templates.clone(), formatter.clone())))]
     pub length: u16,
     // TODO: padding

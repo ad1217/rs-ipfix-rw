@@ -21,7 +21,7 @@ mod parse_tests {
         let formatter = Rc::new(get_default_formatter());
 
         let m = Message::read_args(&mut reader, (templates, formatter));
-        eprintln!("{m:?}");
+        assert!(m.is_err());
     }
 
     #[test]
