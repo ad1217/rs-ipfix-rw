@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod round_trip_tests {
     use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::io::{Cursor, Seek};
     use std::rc::Rc;
 
+    use ahash::{HashMap, HashMapExt};
     use binrw::{BinRead, BinWrite};
 
     use ipfixrw::properties::get_default_enterprise;

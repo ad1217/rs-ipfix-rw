@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod parse_tests {
     use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::io::Cursor;
     use std::net::Ipv4Addr;
     use std::rc::Rc;
 
+    use ahash::{HashMap, HashMapExt};
     use binrw::BinRead;
 
     use ipfixrw::properties::get_default_enterprise;

@@ -2,11 +2,11 @@
 
 use std::{
     cell::RefCell,
-    collections::HashMap,
     net::{Ipv4Addr, Ipv6Addr},
     rc::Rc,
 };
 
+use ahash::{HashMap, HashMapExt};
 use binrw::io::{Read, Seek, Write};
 use binrw::{binrw, until_eof, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, Endian};
 

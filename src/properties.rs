@@ -1,6 +1,6 @@
 //! Vaguely based on formatter.rs from <https://github.com/q6r/rs-ipfix/>
 
-use std::collections::HashMap;
+use ahash::{HashMap, HashMapExt};
 
 use crate::DataRecordType;
 

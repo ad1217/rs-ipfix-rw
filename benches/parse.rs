@@ -1,8 +1,8 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::Rc;
 
+use ahash::{HashMap, HashMapExt};
 use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
 use binrw::BinRead;
 
