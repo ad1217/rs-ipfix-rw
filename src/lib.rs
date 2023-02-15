@@ -208,10 +208,14 @@ impl WriteSize for OptionsTemplateRecord {
 #[brw(big)]
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct FieldSpecifier {
-    // TODO: some more validation is probably required here
+    #[br(temp)]
+    #[bw(calc = information_element_identifier | (u16::from(enterprise_number.is_some()) << 15))]
+    pub raw_information_element_identifier: u16,
+    #[br(calc = raw_information_element_identifier & (u16::MAX >> 1))]
+    #[bw(ignore)]
     pub information_element_identifier: u16,
     pub field_length: u16,
-    #[br(if(information_element_identifier >> 15 == 1))]
+    #[br(if(raw_information_element_identifier >> 15 == 1))]
     pub enterprise_number: Option<u32>,
 }
 
