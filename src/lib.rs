@@ -158,7 +158,7 @@ impl WriteSize for Records {
 }
 
 #[binrw]
-#[bw(big)]
+#[brw(big)]
 #[derive(PartialEq, Debug)]
 #[br(assert(template_id > 255, "Template IDs 0-255 are reserved [template_id: {template_id}]"))]
 pub struct TemplateRecord {
