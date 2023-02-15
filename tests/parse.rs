@@ -9,7 +9,7 @@ mod parse_tests {
     use binrw::BinRead;
 
     use ipfixrw::properties::get_default_formatter;
-    use ipfixrw::{DataRecord, DataRecordKey, DataRecordValue, Message};
+    use ipfixrw::{DataRecord, DataRecordKey, DataRecordType, DataRecordValue, Message};
 
     // shall not cause infinite loop
     #[test]
@@ -120,96 +120,160 @@ mod parse_tests {
         assert_eq!(enterprise_fields, 122);
     }
 
-    // // nprobe -i ens160 -V10 -n localhost:1337 -T "@NTOPNG@"
-    // #[test]
-    // fn test_parse_data_variable_fields() {
-    //     // 257, 258, 259, 260
-    //     let temp_1 = include_bytes!("./parse_temp_1.bin");
-    //     // 261, 262
-    //     let temp_2 = include_bytes!("./parse_temp_2.bin");
+    // nprobe -i ens160 -V10 -n localhost:1337 -T "@NTOPNG@"
+    #[test]
+    fn test_parse_data_variable_fields() {
+        // 257, 258, 259, 260
+        let temp_1 = include_bytes!("./parse_temp_1.bin");
+        // 261, 262
+        let temp_2 = include_bytes!("./parse_temp_2.bin");
 
-    //     // dns sample
-    //     let d1 = include_bytes!("./dns_samp.bin");
+        // dns sample
+        let d1 = include_bytes!("./dns_samp.bin");
 
-    //     // http sample
-    //     let d2 = include_bytes!("./http_samp.bin");
+        // http sample
+        let d2 = include_bytes!("./http_samp.bin");
 
-    //     let mut s = state::State::new();
-    //     let mut p = parser::Parser::new();
+        let templates = Rc::new(RefCell::new(HashMap::new()));
+        let mut formatter = get_default_formatter();
 
-    //     // add custom fields for ntop pen
-    //     p.add_custom_field(35632, 205, "DNS_QUERY", formatter::be_string);
-    //     p.add_custom_field(35632, 206, "DNS_QUERY_ID", formatter::be_string);
-    //     p.add_custom_field(35632, 207, "DNS_QUERY_TYPE", formatter::be_string);
-    //     p.add_custom_field(35632, 208, "DNS_RET_CODE", formatter::be_string);
-    //     p.add_custom_field(35632, 209, "DNS_NUM_ANSWERS", formatter::be_string);
-    //     p.add_custom_field(35632, 352, "DNS_TTL_ANSWER", formatter::be_string);
-    //     p.add_custom_field(35632, 398, "DNS_RESPONSE", formatter::be_string);
-    //     p.add_custom_field(35632, 180, "HTTP_URL", formatter::be_string);
-    //     p.add_custom_field(35632, 360, "HTTP_METHOD", formatter::be_string);
-    //     p.add_custom_field(35632, 181, "HTTP_RET_CODE", formatter::be_string);
-    //     p.add_custom_field(35632, 182, "HTTP_REFERER", formatter::be_string);
-    //     p.add_custom_field(35632, 183, "HTTP_UA", formatter::be_string);
-    //     p.add_custom_field(35632, 184, "HTTP_MIME", formatter::be_string);
-    //     p.add_custom_field(35632, 187, "HTTP_HOST", formatter::be_string);
-    //     p.add_custom_field(35632, 361, "HTTP_SITE", formatter::be_string);
-    //     p.add_custom_field(35632, 460, "HTTP_X_FORWARDED_FOR", formatter::be_string);
-    //     p.add_custom_field(35632, 461, "HTTP_VIA", formatter::be_string);
-    //     p.add_custom_field(35632, 81, "DST_FRAGMENTS", formatter::be_string);
-    //     p.add_custom_field(35632, 123, "CLIENT_NW_LATENCY_MS", formatter::be_string);
-    //     p.add_custom_field(35632, 124, "SERVER_NW_LATENCY_MS", formatter::be_string);
-    //     p.add_custom_field(35632, 79, "SERVER_TCP_FLAGS", formatter::be_string);
-    //     p.add_custom_field(35632, 110, "RETRANSMITTED_OUT_PKTS", formatter::be_string);
-    //     p.add_custom_field(35632, 111, "OOORDER_IN_PKTS", formatter::be_string);
-    //     p.add_custom_field(35632, 188, "TLS_SERVER_NAME", formatter::be_string);
-    //     p.add_custom_field(35632, 189, "BITTORRENT_HASH", formatter::be_string);
-    //     p.add_custom_field(35632, 416, "TCP_WIN_MAX_IN", formatter::be_string);
-    //     p.add_custom_field(35632, 80, "SRC_FRAGMENTS", formatter::be_string);
-    //     p.add_custom_field(35632, 78, "CLIENT_TCP_FLAGS", formatter::be_string);
-    //     p.add_custom_field(35632, 125, "APPL_LATENCY_MS", formatter::be_string);
-    //     p.add_custom_field(35632, 109, "RETRANSMITTED_IN_PKTS", formatter::be_string);
-    //     p.add_custom_field(35632, 420, "TCP_WIN_MAX_OUT", formatter::be_string);
-    //     p.add_custom_field(35632, 509, "L7_PROTO_RISK", formatter::be_string);
-    //     p.add_custom_field(35632, 527, "L7_RISK_SCORE", formatter::be_string);
-    //     p.add_custom_field(35632, 278, "GTPV2_APN_NAME", formatter::be_string);
-    //     p.add_custom_field(35632, 280, "GTPV2_ULI_MNC", formatter::be_string);
-    //     p.add_custom_field(35632, 180, "HTTP_URL", formatter::be_string);
-    //     p.add_custom_field(35632, 380, "RTP_RTT", formatter::be_string);
-    //     p.add_custom_field(35632, 112, "OOORDER_OUT_PKTS", formatter::be_string);
-    //     p.add_custom_field(35632, 118, "L7_PROTO", formatter::be_string);
+        // add custom fields for ntop pen
+        formatter.insert(
+            (35632, 78),
+            ("CLIENT_TCP_FLAGS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert(
+            (35632, 79),
+            ("SERVER_TCP_FLAGS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert((35632, 80), ("SRC_FRAGMENTS", DataRecordType::UnsignedInt));
+        formatter.insert((35632, 81), ("DST_FRAGMENTS", DataRecordType::UnsignedInt));
+        formatter.insert(
+            (35632, 109),
+            ("RETRANSMITTED_IN_PKTS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert(
+            (35632, 110),
+            ("RETRANSMITTED_OUT_PKTS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert(
+            (35632, 111),
+            ("OOORDER_IN_PKTS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert(
+            (35632, 112),
+            ("OOORDER_OUT_PKTS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert((35632, 118), ("L7_PROTO", DataRecordType::UnsignedInt));
+        formatter.insert(
+            (35632, 123),
+            ("CLIENT_NW_LATENCY_MS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert(
+            (35632, 124),
+            ("SERVER_NW_LATENCY_MS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert(
+            (35632, 125),
+            ("APPL_LATENCY_MS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert((35632, 180), ("HTTP_URL", DataRecordType::String));
+        formatter.insert((35632, 181), ("HTTP_RET_CODE", DataRecordType::UnsignedInt));
+        formatter.insert((35632, 182), ("HTTP_REFERER", DataRecordType::String));
+        formatter.insert((35632, 183), ("HTTP_UA", DataRecordType::String));
+        formatter.insert((35632, 184), ("HTTP_MIME", DataRecordType::String));
+        formatter.insert((35632, 187), ("HTTP_HOST", DataRecordType::String));
+        formatter.insert((35632, 188), ("TLS_SERVER_NAME", DataRecordType::String));
+        formatter.insert((35632, 189), ("BITTORRENT_HASH", DataRecordType::String));
+        formatter.insert((35632, 205), ("DNS_QUERY", DataRecordType::String));
+        formatter.insert((35632, 206), ("DNS_QUERY_ID", DataRecordType::UnsignedInt));
+        formatter.insert(
+            (35632, 207),
+            ("DNS_QUERY_TYPE", DataRecordType::UnsignedInt),
+        );
+        formatter.insert((35632, 208), ("DNS_RET_CODE", DataRecordType::UnsignedInt));
+        formatter.insert(
+            (35632, 209),
+            ("DNS_NUM_ANSWERS", DataRecordType::UnsignedInt),
+        );
+        formatter.insert((35632, 278), ("GTPV2_APN_NAME", DataRecordType::String));
+        formatter.insert((35632, 280), ("GTPV2_ULI_MNC", DataRecordType::UnsignedInt));
+        formatter.insert(
+            (35632, 352),
+            ("DNS_TTL_ANSWER", DataRecordType::UnsignedInt),
+        );
+        formatter.insert((35632, 360), ("HTTP_METHOD", DataRecordType::String));
+        formatter.insert((35632, 361), ("HTTP_SITE", DataRecordType::String));
+        formatter.insert((35632, 380), ("RTP_RTT", DataRecordType::UnsignedInt));
+        formatter.insert((35632, 398), ("DNS_RESPONSE", DataRecordType::String));
+        formatter.insert(
+            (35632, 416),
+            ("TCP_WIN_MAX_IN", DataRecordType::UnsignedInt),
+        );
+        formatter.insert(
+            (35632, 420),
+            ("TCP_WIN_MAX_OUT", DataRecordType::UnsignedInt),
+        );
 
-    //     let _ = p.parse_message(&mut s, temp_1);
-    //     let _ = p.parse_message(&mut s, temp_2);
+        formatter.insert(
+            (35632, 460),
+            ("HTTP_X_FORWARDED_FOR", DataRecordType::String),
+        );
+        formatter.insert((35632, 461), ("HTTP_VIA", DataRecordType::String));
+        formatter.insert((35632, 509), ("L7_PROTO_RISK", DataRecordType::UnsignedInt));
+        formatter.insert((35632, 527), ("L7_RISK_SCORE", DataRecordType::UnsignedInt));
 
-    //     let dns = p.parse_message(&mut s, d1).unwrap();
-    //     let records = dns.get_dataset_records();
-    //     assert!(records.len() > 0);
-    //     let record = records[0];
-    //     assert!(record.values.len() == 41);
+        let formatter = Rc::new(formatter);
 
-    //     if let parser::DataRecordValue::String(query) = record
-    //         .values
-    //         .get(&parser::DataRecordKey::Str("DNS_QUERY"))
-    //         .unwrap()
-    //     {
-    //         assert!(query == "asimov.vortex.data.trafficmanager.net");
-    //     }
+        assert!(Message::read_args(
+            &mut Cursor::new(temp_1.as_slice()),
+            (templates.clone(), formatter.clone())
+        )
+        .is_ok());
+        assert!(Message::read_args(
+            &mut Cursor::new(temp_2.as_slice()),
+            (templates.clone(), formatter.clone())
+        )
+        .is_ok());
 
-    //     // http
-    //     let http = p.parse_message(&mut s, d2).unwrap();
-    //     let records = http.get_dataset_records();
-    //     assert!(records.len() > 0);
-    //     let record = records[0];
-    //     assert!(record.values.len() == 42);
+        let dns = Message::read_args(
+            &mut Cursor::new(d1.as_slice()),
+            (templates.clone(), formatter.clone()),
+        )
+        .unwrap();
+        println!("{dns:#?}");
+        let records: Vec<&DataRecord> = dns.iter_data_records().collect();
+        assert!(!records.is_empty());
+        let record = records[0];
+        assert_eq!(record.values.len(), 41);
 
-    //     if let parser::DataRecordValue::String(site) = record
-    //         .values
-    //         .get(&parser::DataRecordKey::Str("HTTP_SITE"))
-    //         .unwrap()
-    //     {
-    //         assert!(site == "example.com");
-    //     }
-    // }
+        if let DataRecordValue::String(query) = record
+            .values
+            .get(&DataRecordKey::Str("DNS_QUERY".into()))
+            .unwrap()
+        {
+            assert_eq!(query, "asimov.vortex.data.trafficmanager.net");
+        }
+
+        // http
+        let http = Message::read_args(
+            &mut Cursor::new(d2.as_slice()),
+            (templates.clone(), formatter.clone()),
+        )
+        .unwrap();
+        let records: Vec<&DataRecord> = http.iter_data_records().collect();
+        assert!(!records.is_empty());
+        let record = records[0];
+        assert_eq!(record.values.len(), 42);
+
+        if let DataRecordValue::String(site) = record
+            .values
+            .get(&DataRecordKey::Str("HTTP_SITE".into()))
+            .unwrap()
+        {
+            assert_eq!(site, "example.com");
+        }
+    }
 
     // #[test]
     // fn concurrency() {
