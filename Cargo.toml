@@ -14,6 +14,7 @@ binrw = "0.11.1"
 
 [dev-dependencies]
 bencher = "0.1.5"
+similar-asserts = { version = "1.4.2", default-features = false }
 test-case = "3.0.0"
 
 [[bench]]

@@ -30,7 +30,7 @@ mod round_trip_tests {
             )?;
             let mut writer = Cursor::new(Vec::new());
             msg.write_args(&mut writer, (templates.clone(), formatter.clone()))?;
-            assert_eq!(file_bytes, writer.into_inner().as_slice());
+            similar_asserts::assert_eq!(expected: file_bytes, actual: writer.into_inner().as_slice());
         }
 
         Ok(())
