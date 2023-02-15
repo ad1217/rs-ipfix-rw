@@ -116,8 +116,7 @@ pub enum Records {
     ),
     #[br(pre_assert(set_id == 3))]
     OptionsTemplate(#[br(parse_with = until_limit(length.into()))] Vec<OptionsTemplateRecord>),
-    // TODO: should re-enable this assert?
-    //#[br(pre_assert(set_id > 255, "Set IDs 0-1 and 4-255 are reserved [set_id: {}]", set_id))]
+    #[br(pre_assert(set_id > 255, "Set IDs 0-1 and 4-255 are reserved [set_id: {set_id}]"))]
     Data {
         #[br(calc = set_id)]
         #[bw(ignore)]
@@ -161,9 +160,8 @@ impl WriteSize for Records {
 #[binrw]
 #[bw(big)]
 #[derive(PartialEq, Debug)]
+#[br(assert(template_id > 255, "Template IDs 0-255 are reserved [template_id: {template_id}]"))]
 pub struct TemplateRecord {
-    // TODO: should re-enable this assert?
-    //#[br(assert(template_id > 255, "Template IDs 0-255 are reserved"))]
     pub template_id: u16,
     #[br(temp)]
     #[bw(try_calc = field_specifiers.len().try_into())]
@@ -183,8 +181,8 @@ impl WriteSize for TemplateRecord {
 #[binrw]
 #[brw(big)]
 #[derive(PartialEq, Debug)]
+#[br(assert(template_id > 255, "Template IDs 0-255 are reserved [template_id: {template_id}]"))]
 pub struct OptionsTemplateRecord {
-    #[br(assert(template_id > 255, "Template IDs 0-255 are reserved"))]
     pub template_id: u16,
     #[br(temp)]
     #[bw(try_calc = field_specifiers.len().try_into())]
