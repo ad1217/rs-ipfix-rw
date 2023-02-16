@@ -90,7 +90,8 @@ pub struct Set {
     #[br(assert(length > 4, "invalid set length: [{length} <= 4]"))]
     #[bw(try_calc = self.write_size((templates.clone(), formatter.clone())))]
     length: u16,
-    // TODO: padding
+    // TODO: write padding/alignment
+    #[br(pad_size_to = length - 4)]
     #[br(args(set_id, length - 4, templates, formatter))]
     #[bw(args(templates, formatter))]
     pub records: Records,
