@@ -11,10 +11,10 @@ mod round_trip_tests {
     use ipfixrw::properties::get_default_formatter;
     use ipfixrw::Message;
 
-    #[test_case(&["parse_temp.bin", "parse_data.bin"]; "parse sample")]
-    #[test_case(&["parse_temp_1.bin", "dns_samp.bin"]; "nprobe dns sample")]
-    #[test_case(&["parse_temp_2.bin","http_samp.bin"]; "nprobe http sample")]
-    fn test_round_trip(filenames: &[&'static str]) -> binrw::BinResult<()> {
+    #[test_case(&["parse_temp.bin", "parse_data.bin"], 0; "parse sample")]
+    #[test_case(&["parse_temp_1.bin", "dns_samp.bin"], 4; "nprobe dns sample")]
+    #[test_case(&["parse_temp_2.bin","http_samp.bin"], 4; "nprobe http sample")]
+    fn test_round_trip(filenames: &[&'static str], alignment: u16) -> binrw::BinResult<()> {
         let templates = Rc::new(RefCell::new(HashMap::new()));
         let formatter = Rc::new(get_default_formatter());
 
@@ -29,7 +29,10 @@ mod round_trip_tests {
                 (templates.clone(), formatter.clone()),
             )?;
             let mut writer = Cursor::new(Vec::new());
-            msg.write_args(&mut writer, (templates.clone(), formatter.clone()))?;
+            msg.write_args(
+                &mut writer,
+                (templates.clone(), formatter.clone(), alignment),
+            )?;
             similar_asserts::assert_eq!(expected: file_bytes, actual: writer.into_inner().as_slice());
         }
 

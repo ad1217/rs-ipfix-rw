@@ -24,22 +24,24 @@ pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.1>
 #[binrw]
 #[brw(big, magic = 10u16)]
-#[brw(import( templates: Templates, formatter: Rc<Formatter>))]
+#[br(import( templates: Templates, formatter: Rc<Formatter>))]
+#[bw(import( templates: Templates, formatter: Rc<Formatter>, alignment: u16))]
 #[derive(PartialEq, Debug)]
 pub struct Message {
     #[br(temp)]
-    #[bw(try_calc = self.write_size((templates.clone(), formatter.clone())))]
+    #[bw(try_calc = self.write_size((templates.clone(), formatter.clone(), alignment)))]
     length: u16,
     pub export_time: u32,
     pub sequence_number: u32,
     pub observation_domain_id: u32,
     #[br(parse_with = until_eof)]
-    #[brw(args(templates, formatter))]
+    #[br(args(templates, formatter))]
+    #[bw(args(templates, formatter, alignment))]
     pub sets: Vec<Set>,
 }
 
 impl WriteSize for Message {
-    type Arg = (Templates, Rc<Formatter>);
+    type Arg = (Templates, Rc<Formatter>, u16);
 
     fn write_size(&self, arg: Self::Arg) -> Result<u16, String> {
         Ok(16 + self.sets.write_size(arg)?)
@@ -80,7 +82,8 @@ impl Message {
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.3>
 #[binrw]
-#[brw(big, import( templates: Templates, formatter: Rc<Formatter> ))]
+#[br(big, import( templates: Templates, formatter: Rc<Formatter> ))]
+#[bw(big, import( templates: Templates, formatter: Rc<Formatter>, alignment: u16 ))]
 #[derive(PartialEq, Debug)]
 pub struct Set {
     #[br(temp)]
@@ -88,20 +91,25 @@ pub struct Set {
     set_id: u16,
     #[br(temp)]
     #[br(assert(length > 4, "invalid set length: [{length} <= 4]"))]
-    #[bw(try_calc = self.write_size((templates.clone(), formatter.clone())))]
+    #[bw(try_calc = self.write_size((templates.clone(), formatter.clone(), alignment)))]
     length: u16,
-    // TODO: write padding/alignment
-    #[br(pad_size_to = length - 4)]
+    #[brw(pad_size_to = length - 4)]
     #[br(args(set_id, length - 4, templates, formatter))]
     #[bw(args(templates, formatter))]
     pub records: Records,
 }
 
 impl WriteSize for Set {
-    type Arg = (Templates, Rc<Formatter>);
+    type Arg = (Templates, Rc<Formatter>, u16);
 
-    fn write_size(&self, arg: Self::Arg) -> Result<u16, String> {
-        Ok(4 + self.records.write_size(arg)?)
+    fn write_size(&self, (templates, formatter, alignment): Self::Arg) -> Result<u16, String> {
+        let length = 4 + self.records.write_size((templates, formatter))?;
+        let padding = if alignment == 0 || length % alignment == 0 {
+            0
+        } else {
+            alignment - (length % alignment)
+        };
+        Ok(length + padding)
     }
 }
 
