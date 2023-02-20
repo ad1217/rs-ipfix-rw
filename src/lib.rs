@@ -25,7 +25,7 @@ pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 #[brw(big, magic = 10u16)]
 #[br(import( templates: Templates, formatter: Rc<Formatter>))]
 #[bw(import( templates: Templates, formatter: Rc<Formatter>, alignment: u16))]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Message {
     #[br(temp)]
     #[bw(try_calc = self.write_size((templates.clone(), formatter.clone(), alignment)))]
@@ -83,7 +83,7 @@ impl Message {
 #[binrw]
 #[br(big, import( templates: Templates, formatter: Rc<Formatter> ))]
 #[bw(big, import( templates: Templates, formatter: Rc<Formatter>, alignment: u16 ))]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Set {
     #[br(temp)]
     #[bw(calc = records.set_id())]
@@ -117,7 +117,7 @@ impl WriteSize for Set {
 #[brw(big)]
 #[br(import ( set_id: u16, length: u16, templates: Templates, formatter: Rc<Formatter> ))]
 #[bw(import ( templates: Templates, formatter: Rc<Formatter> ))]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Records {
     #[br(pre_assert(set_id == 2))]
     Template(
@@ -181,7 +181,7 @@ impl WriteSize for Records {
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.1>
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 #[br(assert(template_id > 255, "Template IDs 0-255 are reserved [template_id: {template_id}]"))]
 pub struct TemplateRecord {
     pub template_id: u16,
@@ -203,7 +203,7 @@ impl WriteSize for TemplateRecord {
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.2>
 #[binrw]
 #[brw(big)]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 #[br(assert(template_id > 255, "Template IDs 0-255 are reserved [template_id: {template_id}]"))]
 pub struct OptionsTemplateRecord {
     pub template_id: u16,
@@ -271,7 +271,7 @@ impl WriteSize for FieldSpecifier {
 }
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.3>
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct DataRecord {
     pub values: HashMap<DataRecordKey, DataRecordValue>,
 }
@@ -367,7 +367,7 @@ impl WriteSize for DataRecord {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum DataRecordKey {
     Str(&'static str),
     Unrecognized(FieldSpecifier),
@@ -394,7 +394,7 @@ pub enum DataRecordType {
 #[binwrite]
 #[bw(big)]
 #[bw(import( length: u16 ))]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum DataRecordValue {
     U8(u8),
     U16(u16),
