@@ -18,7 +18,6 @@ mod util;
 use crate::properties::Formatter;
 use crate::util::{until_limit, WriteSize};
 
-// TODO: add support for option templates
 pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.1>
@@ -126,7 +125,10 @@ pub enum Records {
          Vec<TemplateRecord>,
     ),
     #[br(pre_assert(set_id == 3))]
-    OptionsTemplate(#[br(parse_with = until_limit(length.into()))] Vec<OptionsTemplateRecord>),
+    OptionsTemplate(
+        #[br(map = |x: Vec<OptionsTemplateRecord>| {insert_options_template_records(templates.clone(), x.as_slice()); x}, parse_with = until_limit(length.into()))]
+         Vec<OptionsTemplateRecord>,
+    ),
     #[br(pre_assert(set_id > 255, "Set IDs 0-1 and 4-255 are reserved [set_id: {set_id}]"))]
     Data {
         #[br(calc = set_id)]
@@ -140,6 +142,14 @@ pub enum Records {
 }
 
 fn insert_template_records(templates: Templates, new_templates: &[TemplateRecord]) {
+    let mut templates = templates.borrow_mut();
+    for template in new_templates {
+        templates.insert(template.template_id, template.field_specifiers.clone());
+    }
+}
+
+// TODO: these should probably be treated differently
+fn insert_options_template_records(templates: Templates, new_templates: &[OptionsTemplateRecord]) {
     let mut templates = templates.borrow_mut();
     for template in new_templates {
         templates.insert(template.template_id, template.field_specifiers.clone());
