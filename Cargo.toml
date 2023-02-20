@@ -14,8 +14,9 @@ binrw = "0.11.1"
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "display", "error"] }
 
 [dev-dependencies]
-bencher = "0.1.5"
+criterion = "0.4.0"
 hex = "0.4.3"
+pprof = { version = "0.11.0", features = ["criterion", "flamegraph"] }
 similar-asserts = { version = "1.4.2", default-features = false }
 test-case = "3.0.0"
 

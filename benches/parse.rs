@@ -3,13 +3,14 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use ahash::{HashMap, HashMapExt};
-use bencher::{benchmark_group, benchmark_main, black_box, Bencher};
 use binrw::BinRead;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use pprof::criterion::PProfProfiler;
 
 use ipfixrw::properties::get_default_formatter;
 use ipfixrw::Message;
 
-fn parse_data_with_template(bench: &mut Bencher) {
+fn parse_data_with_template(c: &mut Criterion) {
     // contains templates 500, 999, 501
     let template_bytes = include_bytes!("../tests/parse_temp.bin");
 
@@ -26,16 +27,18 @@ fn parse_data_with_template(bench: &mut Bencher) {
     )
     .unwrap();
 
-    bench.iter(|| {
-        let _ = Message::read_args(
-            &mut Cursor::new(black_box(data_bytes.as_slice())),
-            (templates.clone(), formatter.clone()),
-        )
-        .unwrap();
-    })
+    c.bench_function("data_with_template", |b| {
+        b.iter(|| {
+            let _ = Message::read_args(
+                &mut Cursor::new(black_box(data_bytes.as_slice())),
+                (templates.clone(), formatter.clone()),
+            )
+            .unwrap();
+        })
+    });
 }
 
-fn parse_template(bench: &mut Bencher) {
+fn parse_template(c: &mut Criterion) {
     // contains templates 500, 999, 501
     let template_bytes = include_bytes!("../tests/parse_temp.bin");
 
@@ -43,14 +46,29 @@ fn parse_template(bench: &mut Bencher) {
     let formatter = Rc::new(get_default_formatter());
 
     // parse the template so parsing data can be done
-    bench.iter(|| {
-        let _ = Message::read_args(
-            &mut Cursor::new(black_box(template_bytes.as_slice())),
-            (templates.clone(), formatter.clone()),
-        )
-        .unwrap();
-    })
+    c.bench_function("template", |b| {
+        b.iter(|| {
+            let _ = Message::read_args(
+                &mut Cursor::new(black_box(template_bytes.as_slice())),
+                (templates.clone(), formatter.clone()),
+            )
+            .unwrap();
+        })
+    });
 }
 
-benchmark_group!(benches, parse_template, parse_data_with_template);
-benchmark_main!(benches);
+fn profiler() -> PProfProfiler<'static, 'static> {
+    let mut flamegraph_options = pprof::flamegraph::Options::default();
+    flamegraph_options.image_width = Some(5000);
+    PProfProfiler::new(
+        100,
+        pprof::criterion::Output::Flamegraph(Some(flamegraph_options)),
+    )
+}
+
+criterion_group! {
+    name = benches;
+    config = Criterion::default().with_profiler(profiler());
+    targets = parse_template, parse_data_with_template
+}
+criterion_main!(benches);
