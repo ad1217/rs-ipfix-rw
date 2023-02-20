@@ -17,6 +17,16 @@ macro_rules! formatter {
     };
 }
 
+/// extend an existing `Formatter`
+#[macro_export]
+macro_rules! extend_formatter(
+    { $formatter:ident += { $(($key:expr, $id:expr) => ($string:expr, $value:ident)),+ $(,)? } } => {
+        $formatter.extend([
+            $( ((($key, $id), ($string, DataRecordType::$value))), )+
+        ])
+    };
+);
+
 /// default information element types for no enterprise / enterprise number 0
 pub fn get_default_formatter() -> Formatter {
     formatter! {
