@@ -241,6 +241,18 @@ pub struct FieldSpecifier {
 }
 
 impl FieldSpecifier {
+    pub fn new(
+        enterprise_number: Option<u32>,
+        information_element_identifier: u16,
+        field_length: u16,
+    ) -> Self {
+        Self {
+            information_element_identifier,
+            field_length,
+            enterprise_number,
+        }
+    }
+
     /// Look up a DataRecordKey and DataRecordType for this
     /// information element from the formatter. If not present,
     /// returns Unrecognized/Bytes.
