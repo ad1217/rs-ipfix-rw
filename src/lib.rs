@@ -16,7 +16,7 @@ use binrw::{
 pub mod properties;
 mod util;
 use crate::properties::Formatter;
-use crate::util::{until_limit, WriteSize};
+use crate::util::{stream_position, until_limit, write_position_at};
 
 pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 
@@ -24,11 +24,13 @@ pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 #[binrw]
 #[brw(big, magic = 10u16)]
 #[br(import( templates: Templates, formatter: Rc<Formatter>))]
-#[bw(import( templates: Templates, formatter: Rc<Formatter>, alignment: u16))]
+#[bw(import( templates: Templates, formatter: Rc<Formatter>, alignment: u8))]
+#[bw(stream = s)]
 #[derive(PartialEq, Clone, Debug)]
 pub struct Message {
     #[br(temp)]
-    #[bw(try_calc = self.write_size((templates.clone(), formatter.clone(), alignment)))]
+    // store offset for later updating
+    #[bw(try_calc = stream_position(s))]
     length: u16,
     pub export_time: u32,
     pub sequence_number: u32,
@@ -37,14 +39,10 @@ pub struct Message {
     #[br(args(templates, formatter))]
     #[bw(args(templates, formatter, alignment))]
     pub sets: Vec<Set>,
-}
-
-impl WriteSize for Message {
-    type Arg = (Templates, Rc<Formatter>, u16);
-
-    fn write_size(&self, arg: Self::Arg) -> Result<u16, String> {
-        Ok(16 + self.sets.write_size(arg)?)
-    }
+    // jump back to length and set by current position
+    #[br(temp)]
+    #[bw(restore_position, try_calc = write_position_at(s, length, 0))]
+    _temp: (),
 }
 
 impl Message {
@@ -82,7 +80,7 @@ impl Message {
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.3>
 #[binrw]
 #[br(big, import( templates: Templates, formatter: Rc<Formatter> ))]
-#[bw(big, import( templates: Templates, formatter: Rc<Formatter>, alignment: u16 ))]
+#[bw(big, stream = s, import( templates: Templates, formatter: Rc<Formatter>, alignment: u8 ))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct Set {
     #[br(temp)]
@@ -90,26 +88,18 @@ pub struct Set {
     set_id: u16,
     #[br(temp)]
     #[br(assert(length > 4, "invalid set length: [{length} <= 4]"))]
-    #[bw(try_calc = self.write_size((templates.clone(), formatter.clone(), alignment)))]
+    // store offset for later updating
+    #[bw(try_calc = stream_position(s))]
     length: u16,
-    #[brw(pad_size_to = length - 4)]
+    #[br(pad_size_to = length - 4)]
     #[br(args(set_id, length - 4, templates, formatter))]
+    #[bw(align_after = alignment)]
     #[bw(args(templates, formatter))]
     pub records: Records,
-}
-
-impl WriteSize for Set {
-    type Arg = (Templates, Rc<Formatter>, u16);
-
-    fn write_size(&self, (templates, formatter, alignment): Self::Arg) -> Result<u16, String> {
-        let length = 4 + self.records.write_size((templates, formatter))?;
-        let padding = if alignment == 0 || length % alignment == 0 {
-            0
-        } else {
-            alignment - (length % alignment)
-        };
-        Ok(length + padding)
-    }
+    // jump back to length and set by current position
+    #[br(temp)]
+    #[bw(restore_position, try_calc = write_position_at(s, length, length - 2))]
+    _temp: (),
 }
 
 /// <https://www.rfc-editor.org/rfc/rfc7011.html#section-3.4>
@@ -166,18 +156,6 @@ impl Records {
     }
 }
 
-impl WriteSize for Records {
-    type Arg = (Templates, Rc<Formatter>);
-
-    fn write_size(&self, (templates, formatter): Self::Arg) -> Result<u16, String> {
-        match self {
-            Records::Template(records) => records.write_size(()),
-            Records::OptionsTemplate(records) => records.write_size(()),
-            Records::Data { data, .. } => data.write_size((self.set_id(), templates, formatter)),
-        }
-    }
-}
-
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.1>
 #[binrw]
 #[brw(big)]
@@ -190,14 +168,6 @@ pub struct TemplateRecord {
     field_count: u16,
     #[br(count = field_count)]
     pub field_specifiers: Vec<FieldSpecifier>,
-}
-
-impl WriteSize for TemplateRecord {
-    type Arg = ();
-
-    fn write_size(&self, _: Self::Arg) -> Result<u16, String> {
-        Ok(4 + self.field_specifiers.write_size(())?)
-    }
 }
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.2>
@@ -214,14 +184,6 @@ pub struct OptionsTemplateRecord {
     pub scope_field_count: u16,
     #[br(count = field_count)]
     pub field_specifiers: Vec<FieldSpecifier>,
-}
-
-impl WriteSize for OptionsTemplateRecord {
-    type Arg = ();
-
-    fn write_size(&self, _: Self::Arg) -> Result<u16, String> {
-        Ok(6 + self.field_specifiers.write_size(())?)
-    }
 }
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.2>
@@ -268,17 +230,6 @@ impl FieldSpecifier {
                 &DataRecordType::Bytes,
             ),
         }
-    }
-}
-
-impl WriteSize for FieldSpecifier {
-    type Arg = ();
-
-    fn write_size(&self, _: Self::Arg) -> Result<u16, String> {
-        Ok(4 + match self.enterprise_number {
-            Some(_) => 4,
-            None => 0,
-        })
     }
 }
 
@@ -358,36 +309,6 @@ impl BinWrite for DataRecord {
             writer.write_type_args(value, endian, (field_spec.field_length,))?;
         }
         Ok(())
-    }
-}
-
-impl WriteSize for DataRecord {
-    type Arg = (u16, Templates, Rc<Formatter>);
-
-    fn write_size(&self, (set_id, templates, formatter): Self::Arg) -> Result<u16, String> {
-        let templates = templates.borrow();
-        let template = templates
-            .get(&set_id)
-            .ok_or(format!("Missing template for set id {set_id}"))?;
-
-        let mut size = 0;
-
-        // TODO: should check if all keys are used?
-        for field_spec in template {
-            // TODO: check template type vs actual type?
-            let (key, _ty) = field_spec.key_and_type(&formatter);
-
-            let value = self
-                .values
-                .get(&key)
-                // TODO: better error type?
-                .ok_or("Missing field templated in template".to_string())?;
-
-            // TODO: should pass by reference
-            size += value.write_size(field_spec.clone())?;
-        }
-
-        Ok(size)
     }
 }
 
@@ -546,33 +467,6 @@ impl BinRead for DataRecordValue {
                 pos: reader.stream_position()?,
                 message: format!("Invalid type/length pair: {ty:?} {length}"),
             })?,
-        })
-    }
-}
-
-impl WriteSize for DataRecordValue {
-    type Arg = FieldSpecifier;
-
-    fn write_size(&self, field_spec: Self::Arg) -> Result<u16, String> {
-        // variable length field
-        Ok(if field_spec.field_length == u16::MAX {
-            let len = match self {
-                DataRecordValue::Bytes(bytes) => bytes.len(),
-                DataRecordValue::String(string) => string.len(),
-                _ => Err("Non variable length field!")?,
-            };
-
-            let max_len = u16::MAX - 3;
-            if len > max_len.into() {
-                Err("Tried to determine length for a variable length element which is larger than u16::MAX - 3")?
-            } else if len < 255 {
-                (len + 1) as u16
-            } else {
-                (len + 3) as u16
-            }
-        // fixed length field
-        } else {
-            field_spec.field_length
         })
     }
 }

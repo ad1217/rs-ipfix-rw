@@ -11,10 +11,10 @@ mod round_trip_tests {
     use ipfixrw::properties::get_default_formatter;
     use ipfixrw::Message;
 
-    #[test_case(&["parse_temp.bin", "parse_data.bin"], 0; "parse sample")]
+    #[test_case(&["parse_temp.bin", "parse_data.bin"], 1; "parse sample")]
     #[test_case(&["parse_temp_1.bin", "dns_samp.bin"], 4; "nprobe dns sample")]
     #[test_case(&["parse_temp_2.bin","http_samp.bin"], 4; "nprobe http sample")]
-    fn test_round_trip(filenames: &[&'static str], alignment: u16) -> binrw::BinResult<()> {
+    fn test_round_trip(filenames: &[&'static str], alignment: u8) -> binrw::BinResult<()> {
         let templates = Rc::new(RefCell::new(HashMap::new()));
         let formatter = Rc::new(get_default_formatter());
 

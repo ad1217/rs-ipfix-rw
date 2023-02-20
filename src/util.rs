@@ -1,27 +1,31 @@
-use binrw::io::{Read, Seek, TakeSeekExt};
-use binrw::{until_eof, BinRead, BinResult, Endian};
+use std::num::TryFromIntError;
 
-pub(crate) trait WriteSize {
-    type Arg;
+use binrw::io::{Read, Seek, TakeSeekExt, Write};
+use binrw::{until_eof, BinRead, BinResult, BinWriterExt, Endian};
 
-    fn write_size(&self, arg: Self::Arg) -> Result<u16, String>;
+#[derive(derive_more::From, derive_more::Error, derive_more::Display, Debug)]
+pub enum WritePositionError {
+    Io(binrw::io::Error),
+    TryFromInt(TryFromIntError),
+    BinRw(binrw::Error),
 }
 
-impl<T: WriteSize> WriteSize for Vec<T>
-where
-    <T as WriteSize>::Arg: Clone,
-{
-    type Arg = <T as WriteSize>::Arg;
+pub(crate) fn stream_position<S: Seek>(s: &mut S) -> Result<u16, WritePositionError> {
+    Ok(u16::try_from(s.stream_position()?)?)
+}
 
-    fn write_size(&self, arg: Self::Arg) -> Result<u16, String> {
-        let mut size = 0;
-
-        for element in self {
-            size += element.write_size(arg.clone())?;
-        }
-
-        Ok(size)
-    }
+/// Write the current position of the `writer` at `output_position`, minus `offset`
+/// This is used to get the length of a struct, via an empty field at the end
+pub(crate) fn write_position_at<W: Write + Seek>(
+    writer: &mut W,
+    output_position: u16,
+    offset: u16,
+) -> Result<(), WritePositionError> {
+    // TODO: avoid unwrap
+    let current_position = u16::try_from(writer.stream_position()?)?;
+    writer.seek(std::io::SeekFrom::Start(output_position.into()))?;
+    writer.write_be(&(current_position - offset))?;
+    Ok(())
 }
 
 pub(crate) fn until_limit<Reader, T, Arg, Ret>(
