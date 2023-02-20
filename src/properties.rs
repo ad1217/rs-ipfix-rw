@@ -1,29 +1,21 @@
 //! Vaguely based on formatter.rs from <https://github.com/q6r/rs-ipfix/>
 
-use ahash::{HashMap, HashMapExt};
+use ahash::HashMap;
 
 use crate::DataRecordType;
 
 /// mapping of (enterprise_number, information_element_identifier) -> (name, type)
 pub type Formatter = HashMap<(u32, u16), (&'static str, DataRecordType)>;
 
-macro_rules! count {
-    ($_t:tt) => {
-        1usize
+/// slightly nicer syntax to make a `Formatter`
+#[macro_export]
+macro_rules! formatter {
+    { $(($key:expr, $id:expr) => ($string:expr, $value:ident)),+ $(,)? } => {
+        HashMap::from_iter([
+            $( ((($key, $id), ($string, DataRecordType::$value))), )+
+        ])
     };
 }
-
-/// slightly nicer syntax to make a Formatter
-#[macro_export]
-macro_rules! formatter(
-    { $(($key:expr, $id:expr) => ($string:expr, $value:ident)),+ } => {
-        let mut m = Formatter::with_capacity(0usize $(+ count!($key))+);
-        $(
-            m.insert(($key, $id), ($string, DataRecordType::$value));
-        )+
-        m
-    };
-);
 
 /// default information element types for no enterprise / enterprise number 0
 pub fn get_default_formatter() -> Formatter {
