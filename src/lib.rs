@@ -288,6 +288,18 @@ pub struct DataRecord {
     pub values: HashMap<DataRecordKey, DataRecordValue>,
 }
 
+/// slightly nicer syntax to make a `DataRecord`
+#[macro_export]
+macro_rules! data_record {
+    { $($key:literal: $type:ident($value:expr)),+ $(,)? } => {
+        DataRecord {
+            values: HashMap::from_iter([
+                $( ((DataRecordKey::Str($key), DataRecordValue::$type($value))), )+
+            ])
+        }
+    };
+}
+
 impl BinRead for DataRecord {
     type Args<'a> = (u16, Templates, Rc<Formatter>);
 
