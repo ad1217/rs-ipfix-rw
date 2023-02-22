@@ -4,11 +4,13 @@ mod parse_tests {
     use std::io::Cursor;
     use std::net::Ipv4Addr;
     use std::rc::Rc;
+    use std::sync::{Arc, RwLock};
 
     use ahash::{HashMap, HashMapExt};
     use binrw::BinRead;
 
     use ipfixrw::properties::get_default_formatter;
+    use ipfixrw::template_store::Template;
     use ipfixrw::{DataRecord, DataRecordKey, DataRecordType, DataRecordValue, Message};
 
     // shall not cause infinite loop
@@ -110,12 +112,15 @@ mod parse_tests {
         )
         .unwrap();
         // sum the number of parsed enterprise fields
-        let mut enterprise_fields = 0;
-        for (_k, v) in templates.borrow().iter() {
-            for fs in v {
-                enterprise_fields += if fs.enterprise_number.is_some() { 1 } else { 0 };
-            }
-        }
+        let enterprise_fields = templates
+            .borrow()
+            .values()
+            .flat_map(|t| match t {
+                Template::Template(field_specifiers) => field_specifiers,
+                Template::OptionsTemplate(field_specifiers) => field_specifiers,
+            })
+            .filter(|fs| fs.enterprise_number.is_some())
+            .count();
 
         assert_eq!(enterprise_fields, 122);
     }
@@ -226,34 +231,39 @@ mod parse_tests {
         }
     }
 
-    // #[test]
-    // fn concurrency() {
-    //     // A state to be shared between parsing threads
-    //     let s = Arc::new(RwLock::new(state::State::new()));
+    #[test]
+    fn concurrency() {
+        // A state to be shared between parsing threads
+        let templates = Arc::new(RwLock::new(HashMap::new()));
 
-    //     // First thread to parse a template test
-    //     let s1 = s.clone();
-    //     let j1 = std::thread::spawn(move || {
-    //         // contains templates 500, 999, 501
-    //         let template_bytes = include_bytes!("./parse_temp.bin");
-    //         let p = parser::Parser::new();
-    //         let _m = p.parse_message_async(s1, template_bytes);
-    //     });
+        // First thread to parse a template test
+        let t1 = templates.clone();
+        let j1 = std::thread::spawn(move || {
+            // contains templates 500, 999, 501
+            let template_bytes = include_bytes!("./parse_temp.bin");
+            let formatter = Rc::new(get_default_formatter());
+            let _m = Message::read_args(
+                &mut Cursor::new(template_bytes.as_slice()),
+                (Rc::new(t1), formatter.clone()),
+            );
+        });
 
-    //     // Second thread to parse data set
-    //     let s2 = s.clone();
-    //     let j2 = std::thread::spawn(move || {
-    //         // contains data sets for templates 999, 500, 999
-    //         let data_bytes = include_bytes!("./parse_data.bin");
-    //         let p = parser::Parser::new();
-    //         let _m = p.parse_message_async(s2, data_bytes);
-    //     });
+        // Second thread to parse data set
+        let t2 = templates.clone();
+        let j2 = std::thread::spawn(move || {
+            // contains data sets for templates 999, 500, 999
+            let data_bytes = include_bytes!("./parse_data.bin");
+            let formatter = Rc::new(get_default_formatter());
+            let _m = Message::read_args(
+                &mut Cursor::new(data_bytes.as_slice()),
+                (Rc::new(t2), formatter.clone()),
+            );
+        });
 
-    //     let _r1 = j1.join();
-    //     let _r2 = j2.join();
+        let _r1 = j1.join();
+        let _r2 = j2.join();
 
-    //     // Assert state mutated from threads
-    //     assert!(s.read().unwrap().len() == 3);
-    //     assert!(s.read().unwrap().templates_len() == 3);
-    // }
+        // Assert state mutated from threads
+        assert!(templates.read().unwrap().len() == 3);
+    }
 }

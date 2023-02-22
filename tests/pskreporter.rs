@@ -153,11 +153,17 @@ mod pskreporter_tests {
     fn test_template_example(bytes_str: &'static str, expected_set: Set) -> BinResult<()> {
         let template_bytes = hex::decode(bytes_str).unwrap();
 
-        let parsed = Set::read(&mut Cursor::new(template_bytes.clone()))?;
+        let templates = Rc::new(RefCell::new(HashMap::new()));
+        let formatter = Rc::new(pskreporter_formatter());
+
+        let parsed = Set::read_args(
+            &mut Cursor::new(template_bytes.clone()),
+            (templates.clone(), formatter.clone()),
+        )?;
         similar_asserts::assert_eq!(expected: expected_set, parsed: parsed);
 
         let mut writer = Cursor::new(Vec::new());
-        expected_set.write_args(&mut writer, (Rc::default(), Rc::default(), 4))?;
+        expected_set.write_args(&mut writer, (templates, formatter, 4))?;
         similar_asserts::assert_eq!(expected: template_bytes, parsed: writer.into_inner());
 
         Ok(())

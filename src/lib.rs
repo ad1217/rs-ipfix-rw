@@ -1,7 +1,6 @@
 //! Read-write implementation of the IPFIX Protocol, see <https://www.rfc-editor.org/rfc/rfc7011>
 
 use std::{
-    cell::RefCell,
     net::{Ipv4Addr, Ipv6Addr},
     rc::Rc,
 };
@@ -14,17 +13,17 @@ use binrw::{
 };
 
 pub mod properties;
+pub mod template_store;
 mod util;
 use crate::properties::Formatter;
+use crate::template_store::{Template, TemplateStore};
 use crate::util::{stream_position, until_limit, write_position_at};
-
-pub type Templates = Rc<RefCell<HashMap<u16, Vec<FieldSpecifier>>>>;
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.1>
 #[binrw]
 #[brw(big, magic = 10u16)]
-#[br(import( templates: Templates, formatter: Rc<Formatter>))]
-#[bw(import( templates: Templates, formatter: Rc<Formatter>, alignment: u8))]
+#[br(import( templates: TemplateStore, formatter: Rc<Formatter>))]
+#[bw(import( templates: TemplateStore, formatter: Rc<Formatter>, alignment: u8))]
 #[bw(stream = s)]
 #[derive(PartialEq, Clone, Debug)]
 pub struct Message {
@@ -79,8 +78,8 @@ impl Message {
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.3>
 #[binrw]
-#[br(big, import( templates: Templates, formatter: Rc<Formatter> ))]
-#[bw(big, stream = s, import( templates: Templates, formatter: Rc<Formatter>, alignment: u8 ))]
+#[br(big, import( templates: TemplateStore, formatter: Rc<Formatter> ))]
+#[bw(big, stream = s, import( templates: TemplateStore, formatter: Rc<Formatter>, alignment: u8 ))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct Set {
     #[br(temp)]
@@ -105,19 +104,21 @@ pub struct Set {
 /// <https://www.rfc-editor.org/rfc/rfc7011.html#section-3.4>
 #[binrw]
 #[brw(big)]
-#[br(import ( set_id: u16, length: u16, templates: Templates, formatter: Rc<Formatter> ))]
-#[bw(import ( templates: Templates, formatter: Rc<Formatter> ))]
+#[br(import ( set_id: u16, length: u16, templates: TemplateStore, formatter: Rc<Formatter> ))]
+#[bw(import ( templates: TemplateStore, formatter: Rc<Formatter> ))]
 #[derive(PartialEq, Clone, Debug)]
 pub enum Records {
     #[br(pre_assert(set_id == 2))]
     Template(
-        #[br(map = |x: Vec<TemplateRecord>| {insert_template_records(templates.clone(), x.as_slice()); x}, parse_with = until_limit(length.into()))]
-         Vec<TemplateRecord>,
+        #[br(map = |x: Vec<TemplateRecord>| {templates.insert_template_records(x.as_slice(), &formatter); x})]
+        #[br(parse_with = until_limit(length.into()))]
+        Vec<TemplateRecord>,
     ),
     #[br(pre_assert(set_id == 3))]
     OptionsTemplate(
-        #[br(map = |x: Vec<OptionsTemplateRecord>| {insert_options_template_records(templates.clone(), x.as_slice()); x}, parse_with = until_limit(length.into()))]
-         Vec<OptionsTemplateRecord>,
+        #[br(map = |x: Vec<OptionsTemplateRecord>| {templates.insert_options_template_records(x.as_slice(), &formatter); x})]
+        #[br(parse_with = until_limit(length.into()))]
+        Vec<OptionsTemplateRecord>,
     ),
     #[br(pre_assert(set_id > 255, "Set IDs 0-1 and 4-255 are reserved [set_id: {set_id}]"))]
     Data {
@@ -125,25 +126,10 @@ pub enum Records {
         #[bw(ignore)]
         set_id: u16,
         #[br(parse_with = until_limit(length.into()))]
-        #[br(args(set_id, templates, formatter))]
-        #[bw(args(*set_id, templates, formatter))]
+        #[br(args(set_id, templates))]
+        #[bw(args(*set_id, templates))]
         data: Vec<DataRecord>,
     },
-}
-
-fn insert_template_records(templates: Templates, new_templates: &[TemplateRecord]) {
-    let mut templates = templates.borrow_mut();
-    for template in new_templates {
-        templates.insert(template.template_id, template.field_specifiers.clone());
-    }
-}
-
-// TODO: these should probably be treated differently
-fn insert_options_template_records(templates: Templates, new_templates: &[OptionsTemplateRecord]) {
-    let mut templates = templates.borrow_mut();
-    for template in new_templates {
-        templates.insert(template.template_id, template.field_specifiers.clone());
-    }
 }
 
 impl Records {
@@ -214,23 +200,6 @@ impl FieldSpecifier {
             enterprise_number,
         }
     }
-
-    /// Look up a DataRecordKey and DataRecordType for this
-    /// information element from the formatter. If not present,
-    /// returns Unrecognized/Bytes.
-    fn key_and_type<'a>(&self, formatter: &'a Formatter) -> (DataRecordKey, &'a DataRecordType) {
-        match formatter.get(&(
-            self.enterprise_number.unwrap_or(0),
-            self.information_element_identifier,
-        )) {
-            Some((name, ty)) => (DataRecordKey::Str(name), ty),
-            None => (
-                DataRecordKey::Unrecognized(self.clone()),
-                // TODO: this is probably not technically correct
-                &DataRecordType::Bytes,
-            ),
-        }
-    }
 }
 
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.4.3>
@@ -252,58 +221,71 @@ macro_rules! data_record {
 }
 
 impl BinRead for DataRecord {
-    type Args<'a> = (u16, Templates, Rc<Formatter>);
+    type Args<'a> = (u16, TemplateStore);
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        (set_id, templates, formatter): Self::Args<'_>,
+        (set_id, templates): Self::Args<'_>,
     ) -> BinResult<Self> {
-        let templates = templates.borrow();
-        let template = templates.get(&set_id).ok_or(binrw::Error::AssertFail {
-            pos: reader.stream_position()?,
-            message: format!("Missing template for set id {set_id}"),
-        })?;
+        let template = templates
+            .get_template(set_id)
+            .ok_or(binrw::Error::AssertFail {
+                pos: reader.stream_position()?,
+                message: format!("Missing template for set id {set_id}"),
+            })?;
 
-        let mut values = HashMap::with_capacity(template.len());
-        for field_spec in template.iter() {
+        // TODO: should these be handled differently?
+        let field_specifiers = match template {
+            Template::Template(field_specifiers) => field_specifiers,
+            Template::OptionsTemplate(field_specifiers) => field_specifiers,
+        };
+
+        let mut values = HashMap::with_capacity(field_specifiers.len());
+        for field_spec in field_specifiers.iter() {
             // TODO: should read whole field length according to template, regardless of type
-            let (key, ty) = field_spec.key_and_type(&formatter);
-            let value = reader.read_type_args(endian, (*ty, field_spec.field_length))?;
+            let value = reader.read_type_args(endian, (field_spec.ty, field_spec.field_length))?;
 
-            values.insert(key, value);
+            values.insert(field_spec.name.clone(), value);
         }
         Ok(Self { values })
     }
 }
 
 impl BinWrite for DataRecord {
-    type Args<'a> = (u16, Templates, Rc<Formatter>);
+    type Args<'a> = (u16, TemplateStore);
 
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
         endian: Endian,
-        (set_id, templates, formatter): Self::Args<'_>,
+        (set_id, templates): Self::Args<'_>,
     ) -> BinResult<()> {
-        let templates = templates.borrow();
-        let template = templates.get(&set_id).ok_or(binrw::Error::AssertFail {
-            pos: writer.stream_position()?,
-            message: format!("Missing template for set id {set_id}"),
-        })?;
+        let template = templates
+            .get_template(set_id)
+            .ok_or(binrw::Error::AssertFail {
+                pos: writer.stream_position()?,
+                message: format!("Missing template for set id {set_id}"),
+            })?;
+
+        let field_specifiers = match template {
+            Template::Template(field_specifiers) => field_specifiers,
+            Template::OptionsTemplate(field_specifiers) => field_specifiers,
+        };
 
         // TODO: should check if all keys are used?
-        for field_spec in template {
+        for field_spec in field_specifiers {
             // TODO: check template type vs actual type?
-            let (key, _ty) = field_spec.key_and_type(&formatter);
-
             let value = self
                 .values
-                .get(&key)
+                .get(&field_spec.name)
                 // TODO: better error type?
                 .ok_or(binrw::Error::AssertFail {
                     pos: writer.stream_position()?,
-                    message: format!("Field in template missing from data [{key:?}]"),
+                    message: format!(
+                        "Field in template missing from data [{:?}]",
+                        field_spec.name
+                    ),
                 })?;
 
             writer.write_type_args(value, endian, (field_spec.field_length,))?;
