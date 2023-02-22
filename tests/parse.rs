@@ -16,7 +16,7 @@ mod parse_tests {
     // shall not cause infinite loop
     #[test]
     fn looper_01() {
-        let b = include_bytes!("./looper_01.bin");
+        let b = include_bytes!("../resources/tests/looper_01.bin");
         let mut reader = Cursor::new(b.as_slice());
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
@@ -29,10 +29,10 @@ mod parse_tests {
     #[test]
     fn test_parse() {
         // contains templates 500, 999, 501
-        let template_bytes = include_bytes!("./parse_temp.bin");
+        let template_bytes = include_bytes!("../resources/tests/parse_temp.bin");
 
         // contains data sets for templates 999, 500, 999
-        let data_bytes = include_bytes!("./parse_data.bin");
+        let data_bytes = include_bytes!("../resources/tests/parse_data.bin");
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
         let formatter = Rc::new(get_default_formatter());
@@ -94,9 +94,9 @@ mod parse_tests {
     #[test]
     fn test_parse_template_enterprise_fields() {
         // 257, 258, 259, 260
-        let temp_1 = include_bytes!("./parse_temp_1.bin");
+        let temp_1 = include_bytes!("../resources/tests/parse_temp_1.bin");
         // 261, 262
-        let temp_2 = include_bytes!("./parse_temp_2.bin");
+        let temp_2 = include_bytes!("../resources/tests/parse_temp_2.bin");
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
         let formatter = Rc::new(get_default_formatter());
@@ -129,15 +129,15 @@ mod parse_tests {
     #[test]
     fn test_parse_data_variable_fields() {
         // 257, 258, 259, 260
-        let temp_1 = include_bytes!("./parse_temp_1.bin");
+        let temp_1 = include_bytes!("../resources/tests/parse_temp_1.bin");
         // 261, 262
-        let temp_2 = include_bytes!("./parse_temp_2.bin");
+        let temp_2 = include_bytes!("../resources/tests/parse_temp_2.bin");
 
         // dns sample
-        let d1 = include_bytes!("./dns_samp.bin");
+        let d1 = include_bytes!("../resources/tests/dns_samp.bin");
 
         // http sample
-        let d2 = include_bytes!("./http_samp.bin");
+        let d2 = include_bytes!("../resources/tests/http_samp.bin");
 
         let templates = Rc::new(RefCell::new(HashMap::new()));
         let mut formatter = get_default_formatter();
@@ -240,7 +240,7 @@ mod parse_tests {
         let t1 = templates.clone();
         let j1 = std::thread::spawn(move || {
             // contains templates 500, 999, 501
-            let template_bytes = include_bytes!("./parse_temp.bin");
+            let template_bytes = include_bytes!("../resources/tests/parse_temp.bin");
             let formatter = Rc::new(get_default_formatter());
             let _m = Message::read_args(
                 &mut Cursor::new(template_bytes.as_slice()),
@@ -252,7 +252,7 @@ mod parse_tests {
         let t2 = templates.clone();
         let j2 = std::thread::spawn(move || {
             // contains data sets for templates 999, 500, 999
-            let data_bytes = include_bytes!("./parse_data.bin");
+            let data_bytes = include_bytes!("../resources/tests/parse_data.bin");
             let formatter = Rc::new(get_default_formatter());
             let _m = Message::read_args(
                 &mut Cursor::new(data_bytes.as_slice()),

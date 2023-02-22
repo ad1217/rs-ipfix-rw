@@ -19,9 +19,10 @@ mod round_trip_tests {
         let formatter = Rc::new(get_default_formatter());
 
         for filename in filenames {
-            let path: std::path::PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", filename]
-                .iter()
-                .collect();
+            let path: std::path::PathBuf =
+                [env!("CARGO_MANIFEST_DIR"), "resources", "tests", filename]
+                    .iter()
+                    .collect();
             let file_bytes = std::fs::read(path)?;
 
             let msg = Message::read_args(

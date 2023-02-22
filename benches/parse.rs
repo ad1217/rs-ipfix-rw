@@ -12,10 +12,10 @@ use ipfixrw::Message;
 
 fn parse_data_with_template(c: &mut Criterion) {
     // contains templates 500, 999, 501
-    let template_bytes = include_bytes!("../tests/parse_temp.bin");
+    let template_bytes = include_bytes!("../resources/tests/parse_temp.bin");
 
     // contains data sets for templates 999, 500, 999
-    let data_bytes = include_bytes!("../tests/parse_data.bin");
+    let data_bytes = include_bytes!("../resources/tests/parse_data.bin");
 
     let templates = Rc::new(RefCell::new(HashMap::new()));
     let formatter = Rc::new(get_default_formatter());
@@ -40,7 +40,7 @@ fn parse_data_with_template(c: &mut Criterion) {
 
 fn parse_template(c: &mut Criterion) {
     // contains templates 500, 999, 501
-    let template_bytes = include_bytes!("../tests/parse_temp.bin");
+    let template_bytes = include_bytes!("../resources/tests/parse_temp.bin");
 
     let templates = Rc::new(RefCell::new(HashMap::new()));
     let formatter = Rc::new(get_default_formatter());
