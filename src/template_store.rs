@@ -55,7 +55,7 @@ pub enum Template {
     OptionsTemplate(Vec<ExpandedFieldSpecifier>),
 }
 
-pub trait TemplateStorage {
+pub trait TemplateStorage: std::fmt::Debug {
     fn get_template(&self, template_id: u16) -> Option<Template>;
     fn insert_template(&self, template_id: u16, template: Template);
 
