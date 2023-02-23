@@ -1,22 +1,20 @@
 //! Samples from pskreporter documentation <https://pskreporter.info/pskdev.html>
 
-#[cfg(test)]
-mod pskreporter_tests {
-    use std::{cell::RefCell, io::Cursor, rc::Rc};
+use std::{cell::RefCell, io::Cursor, rc::Rc};
 
-    use ahash::{HashMap, HashMapExt};
-    use binrw::{BinRead, BinResult, BinWrite};
-    use test_case::test_case;
+use ahash::{HashMap, HashMapExt};
+use binrw::{BinRead, BinResult, BinWrite};
+use test_case::test_case;
 
-    use ipfixrw::{
-        data_record,
-        properties::{get_default_formatter, Formatter},
-        DataRecord, DataRecordKey, DataRecordType, DataRecordValue, FieldSpecifier, Message,
-        OptionsTemplateRecord, Records, Set, TemplateRecord,
-    };
+use ipfixrw::{
+    data_record,
+    properties::{get_default_formatter, Formatter},
+    DataRecord, DataRecordKey, DataRecordType, DataRecordValue, FieldSpecifier, Message,
+    OptionsTemplateRecord, Records, Set, TemplateRecord,
+};
 
-    // receiver information templates
-    #[test_case(
+// receiver information templates
+#[test_case(
         concat!(
             "00030024999200030000",
             "8002FFFF0000768F",
@@ -35,7 +33,7 @@ mod pskreporter_tests {
                 ],
             }]),
         } ; "receiverCallsign, receiverLocator, decodingSoftware")]
-    #[test_case(
+#[test_case(
         concat!(
             "0003002C999200040000",
             "8002FFFF0000768F",
@@ -56,8 +54,8 @@ mod pskreporter_tests {
                 ],
             }]),
         } ; "receiverCallsign, receiverLocator, decodingSoftware, anntennaInformation")]
-    // sender information templates
-    #[test_case(
+// sender information templates
+#[test_case(
         concat!(
             "0002002C99930005",
             "8001FFFF0000768F",
@@ -77,7 +75,7 @@ mod pskreporter_tests {
                 ],
             }])
         } ; "senderCallsign, frequency, mode, informationSource (1 byte), flowStartSeconds")]
-    #[test_case(
+#[test_case(
         concat!(
             "0002003499930006",
             "8001FFFF0000768F",
@@ -99,7 +97,7 @@ mod pskreporter_tests {
                 ],
             }])
         } ; "senderCallsign, frequency, mode, informationSource (1 byte), senderLocator, flowStartSeconds")]
-    #[test_case(
+#[test_case(
         concat!(
             "0002003C99930007",
             "8001FFFF0000768F",
@@ -123,7 +121,7 @@ mod pskreporter_tests {
                 ],
             }])
         } ; "senderCallsign, frequency, sNR (1 byte), iMD (1 byte), mode, informationSource (1 byte), flowStartSeconds")]
-    #[test_case(
+#[test_case(
         concat!(
             "0002004499930008",
             "8001FFFF0000768F",
@@ -150,50 +148,50 @@ mod pskreporter_tests {
             }])
         } ; "senderCallsign, frequency, sNR (1 byte), iMD (1 byte), mode, informationSource (1 byte), senderLocator, flowStartSeconds")]
 
-    fn test_template_example(bytes_str: &'static str, expected_set: Set) -> BinResult<()> {
-        let template_bytes = hex::decode(bytes_str).unwrap();
+fn test_template_example(bytes_str: &'static str, expected_set: Set) -> BinResult<()> {
+    let template_bytes = hex::decode(bytes_str).unwrap();
 
-        let templates = Rc::new(RefCell::new(HashMap::new()));
-        let formatter = Rc::new(pskreporter_formatter());
+    let templates = Rc::new(RefCell::new(HashMap::new()));
+    let formatter = Rc::new(pskreporter_formatter());
 
-        let parsed = Set::read_args(
-            &mut Cursor::new(template_bytes.clone()),
-            (templates.clone(), formatter.clone()),
-        )?;
-        similar_asserts::assert_eq!(expected: expected_set, parsed: parsed);
+    let parsed = Set::read_args(
+        &mut Cursor::new(template_bytes.clone()),
+        (templates.clone(), formatter.clone()),
+    )?;
+    similar_asserts::assert_eq!(expected: expected_set, parsed: parsed);
 
-        let mut writer = Cursor::new(Vec::new());
-        expected_set.write_args(&mut writer, (templates, formatter, 4))?;
-        similar_asserts::assert_eq!(expected: template_bytes, parsed: writer.into_inner());
+    let mut writer = Cursor::new(Vec::new());
+    expected_set.write_args(&mut writer, (templates, formatter, 4))?;
+    similar_asserts::assert_eq!(expected: template_bytes, parsed: writer.into_inner());
 
-        Ok(())
-    }
+    Ok(())
+}
 
-    fn pskreporter_formatter() -> Formatter {
-        let mut formatter = get_default_formatter();
+fn pskreporter_formatter() -> Formatter {
+    let mut formatter = get_default_formatter();
 
-        ipfixrw::extend_formatter!(formatter += {
-            (30351, 1) => ("senderCallsign", String),
-            (30351, 2) => ("receiverCallsign", String),
-            (30351, 3) => ("senderLocator", String),
-            (30351, 4) => ("receiverLocator", String),
-            (30351, 5) => ("frequency", UnsignedInt),
-            (30351, 6) => ("sNR", UnsignedInt),
-            (30351, 7) => ("iMD", UnsignedInt),
-            (30351, 8) => ("decoderSoftware", String),
-            (30351, 9) => ("antennaInformation", String),
-            (30351, 10) => ("mode", String),
+    ipfixrw::extend_formatter!(formatter += {
+        (30351, 1) => ("senderCallsign", String),
+        (30351, 2) => ("receiverCallsign", String),
+        (30351, 3) => ("senderLocator", String),
+        (30351, 4) => ("receiverLocator", String),
+        (30351, 5) => ("frequency", UnsignedInt),
+        (30351, 6) => ("sNR", UnsignedInt),
+        (30351, 7) => ("iMD", UnsignedInt),
+        (30351, 8) => ("decoderSoftware", String),
+        (30351, 9) => ("antennaInformation", String),
+        (30351, 10) => ("mode", String),
 
-            (30351, 11) => ("informationSource", UnsignedInt),
+        (30351, 11) => ("informationSource", UnsignedInt),
 
-            (30351, 12) => ("persistentIdentifier", String)
-        });
-        formatter
-    }
+        (30351, 12) => ("persistentIdentifier", String)
+    });
+    formatter
+}
 
-    #[test]
-    fn test_full_examples() -> BinResult<()> {
-        #[rustfmt::skip]
+#[test]
+fn test_full_examples() -> BinResult<()> {
+    #[rustfmt::skip]
         let full_packet_bytes = hex::decode(
             concat!(
                 "000A00AC479532720000000100000000",
@@ -210,69 +208,69 @@ mod pskreporter_tests {
                 "0000",
             )).unwrap();
 
-        let expected_full_message = Message {
-            export_time: 1200960114,
-            sequence_number: 1,
-            observation_domain_id: 0,
-            sets: vec![
-                Set {
-                    records: Records::OptionsTemplate(vec![OptionsTemplateRecord {
-                        template_id: 0x9992,
-                        scope_field_count: 0,
-                        field_specifiers: vec![
-                            FieldSpecifier::new(Some(30351), 2, u16::MAX),
-                            FieldSpecifier::new(Some(30351), 4, u16::MAX),
-                            FieldSpecifier::new(Some(30351), 8, u16::MAX),
-                        ],
-                    }]),
+    let expected_full_message = Message {
+        export_time: 1200960114,
+        sequence_number: 1,
+        observation_domain_id: 0,
+        sets: vec![
+            Set {
+                records: Records::OptionsTemplate(vec![OptionsTemplateRecord {
+                    template_id: 0x9992,
+                    scope_field_count: 0,
+                    field_specifiers: vec![
+                        FieldSpecifier::new(Some(30351), 2, u16::MAX),
+                        FieldSpecifier::new(Some(30351), 4, u16::MAX),
+                        FieldSpecifier::new(Some(30351), 8, u16::MAX),
+                    ],
+                }]),
+            },
+            Set {
+                records: Records::Template(vec![TemplateRecord {
+                    template_id: 0x9993,
+                    field_specifiers: vec![
+                        FieldSpecifier::new(Some(30351), 1, u16::MAX),
+                        FieldSpecifier::new(Some(30351), 5, 4),
+                        FieldSpecifier::new(Some(30351), 10, u16::MAX),
+                        FieldSpecifier::new(Some(30351), 11, 1),
+                        FieldSpecifier::new(None, 150, 4),
+                    ],
+                }]),
+            },
+            Set {
+                records: Records::Data {
+                    set_id: 0x9992,
+                    data: vec![data_record! {
+                        "receiverCallsign": String("N1DQ".into()),
+                        "receiverLocator": String("FN42hn".into()),
+                        "decoderSoftware": String("Homebrew v5.6".into()),
+                    }],
                 },
-                Set {
-                    records: Records::Template(vec![TemplateRecord {
-                        template_id: 0x9993,
-                        field_specifiers: vec![
-                            FieldSpecifier::new(Some(30351), 1, u16::MAX),
-                            FieldSpecifier::new(Some(30351), 5, 4),
-                            FieldSpecifier::new(Some(30351), 10, u16::MAX),
-                            FieldSpecifier::new(Some(30351), 11, 1),
-                            FieldSpecifier::new(None, 150, 4),
-                        ],
-                    }]),
+            },
+            Set {
+                records: Records::Data {
+                    set_id: 0x9993,
+                    data: vec![
+                        data_record! {
+                            "senderCallsign": String("N1DQ".into()),
+                            "frequency": U32(14070567),
+                            "mode": String("PSK".into()),
+                            "informationSource": U8(1),
+                            "flowStartSeconds": DateTimeSeconds(1200960084),
+                        },
+                        data_record! {
+                            "senderCallsign": String("KB1MBX".into()),
+                            "frequency": U32(14070987),
+                            "mode": String("PSK".into()),
+                            "informationSource": U8(1),
+                            "flowStartSeconds": DateTimeSeconds(1200960104),
+                        },
+                    ],
                 },
-                Set {
-                    records: Records::Data {
-                        set_id: 0x9992,
-                        data: vec![data_record! {
-                            "receiverCallsign": String("N1DQ".into()),
-                            "receiverLocator": String("FN42hn".into()),
-                            "decoderSoftware": String("Homebrew v5.6".into()),
-                        }],
-                    },
-                },
-                Set {
-                    records: Records::Data {
-                        set_id: 0x9993,
-                        data: vec![
-                            data_record! {
-                                "senderCallsign": String("N1DQ".into()),
-                                "frequency": U32(14070567),
-                                "mode": String("PSK".into()),
-                                "informationSource": U8(1),
-                                "flowStartSeconds": DateTimeSeconds(1200960084),
-                            },
-                            data_record! {
-                                "senderCallsign": String("KB1MBX".into()),
-                                "frequency": U32(14070987),
-                                "mode": String("PSK".into()),
-                                "informationSource": U8(1),
-                                "flowStartSeconds": DateTimeSeconds(1200960104),
-                            },
-                        ],
-                    },
-                },
-            ],
-        };
+            },
+        ],
+    };
 
-        #[rustfmt::skip]
+    #[rustfmt::skip]
         // TODO: same typos in source as full packet
         let data_only_packet_bytes =hex::decode(
             concat!(
@@ -283,34 +281,33 @@ mod pskreporter_tests {
                 "0000",
             )).unwrap();
 
-        let expected_data_only_message = Message {
-            export_time: 1200960114,
-            sequence_number: 4,
-            observation_domain_id: 0,
-            // same as full packet, but without the templates and option templates sets
-            sets: expected_full_message.sets[2..].to_vec(),
-        };
+    let expected_data_only_message = Message {
+        export_time: 1200960114,
+        sequence_number: 4,
+        observation_domain_id: 0,
+        // same as full packet, but without the templates and option templates sets
+        sets: expected_full_message.sets[2..].to_vec(),
+    };
 
-        let templates = Rc::new(RefCell::new(HashMap::new()));
-        let formatter = Rc::new(pskreporter_formatter());
+    let templates = Rc::new(RefCell::new(HashMap::new()));
+    let formatter = Rc::new(pskreporter_formatter());
 
-        let full_message = Message::read_args(
-            &mut Cursor::new(full_packet_bytes.as_slice()),
-            (templates.clone(), formatter.clone()),
-        )?;
+    let full_message = Message::read_args(
+        &mut Cursor::new(full_packet_bytes.as_slice()),
+        (templates.clone(), formatter.clone()),
+    )?;
 
-        similar_asserts::assert_eq!(expected: expected_full_message, actual: full_message);
+    similar_asserts::assert_eq!(expected: expected_full_message, actual: full_message);
 
-        let data_only_message = Message::read_args(
-            &mut Cursor::new(data_only_packet_bytes.as_slice()),
-            (templates.clone(), formatter.clone()),
-        )?;
+    let data_only_message = Message::read_args(
+        &mut Cursor::new(data_only_packet_bytes.as_slice()),
+        (templates.clone(), formatter.clone()),
+    )?;
 
-        similar_asserts::assert_eq!(
-            expected: expected_data_only_message,
-            actual: data_only_message
-        );
+    similar_asserts::assert_eq!(
+        expected: expected_data_only_message,
+        actual: data_only_message
+    );
 
-        Ok(())
-    }
+    Ok(())
 }
