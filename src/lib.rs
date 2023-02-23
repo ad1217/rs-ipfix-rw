@@ -1,4 +1,4 @@
-//! Read-write implementation of the IPFIX Protocol, see <https://www.rfc-editor.org/rfc/rfc7011>
+#![doc = include_str!("../README.md")]
 
 pub mod information_elements;
 pub mod parser;

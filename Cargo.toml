@@ -5,6 +5,7 @@ authors = ["Adam Goldsmith <adam@adamgoldsmith.name>"]
 edition = "2021"
 description = "IPFIX reader/writer library"
 license = "MIT"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
