@@ -1,14 +1,12 @@
 use std::cell::RefCell;
-use std::io::Cursor;
 use std::rc::Rc;
 
 use ahash::{HashMap, HashMapExt};
-use binrw::BinRead;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use ipfixrw::parse_ipfix_message;
 use pprof::criterion::PProfProfiler;
 
 use ipfixrw::information_elements::get_default_formatter;
-use ipfixrw::parser::Message;
 
 fn parse_data_with_template(c: &mut Criterion) {
     // contains templates 500, 999, 501
@@ -21,19 +19,18 @@ fn parse_data_with_template(c: &mut Criterion) {
     let formatter = Rc::new(get_default_formatter());
 
     // parse the template so parsing data can be done
-    Message::read_args(
-        &mut Cursor::new(template_bytes.as_slice()),
-        (templates.clone(), formatter.clone()),
+    let _ = parse_ipfix_message(
+        black_box(template_bytes),
+        templates.clone(),
+        formatter.clone(),
     )
     .unwrap();
 
     c.bench_function("data_with_template", |b| {
         b.iter(|| {
-            let _ = Message::read_args(
-                &mut Cursor::new(black_box(data_bytes.as_slice())),
-                (templates.clone(), formatter.clone()),
-            )
-            .unwrap();
+            let _ =
+                parse_ipfix_message(black_box(data_bytes), templates.clone(), formatter.clone())
+                    .unwrap();
         })
     });
 }
@@ -48,9 +45,10 @@ fn parse_template(c: &mut Criterion) {
     // parse the template so parsing data can be done
     c.bench_function("template", |b| {
         b.iter(|| {
-            let _ = Message::read_args(
-                &mut Cursor::new(black_box(template_bytes.as_slice())),
-                (templates.clone(), formatter.clone()),
+            let _ = parse_ipfix_message(
+                black_box(template_bytes),
+                templates.clone(),
+                formatter.clone(),
             )
             .unwrap();
         })

@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::io::Cursor;
 use std::net::Ipv4Addr;
 use std::rc::Rc;
 use std::sync::{Arc, RwLock};
@@ -8,19 +7,19 @@ use ahash::{HashMap, HashMapExt};
 use binrw::BinRead;
 
 use ipfixrw::information_elements::get_default_formatter;
-use ipfixrw::parser::{DataRecord, DataRecordKey, DataRecordType, DataRecordValue, Message};
+use ipfixrw::parse_ipfix_message;
+use ipfixrw::parser::{DataRecord, DataRecordKey, DataRecordType, DataRecordValue};
 use ipfixrw::template_store::Template;
 
 // shall not cause infinite loop
 #[test]
 fn looper_01() {
     let b = include_bytes!("../resources/tests/looper_01.bin");
-    let mut reader = Cursor::new(b.as_slice());
 
     let templates = Rc::new(RefCell::new(HashMap::new()));
     let formatter = Rc::new(get_default_formatter());
 
-    let m = Message::read_args(&mut reader, (templates, formatter));
+    let m = parse_ipfix_message(b, templates, formatter);
     assert!(m.is_err());
 }
 
@@ -35,27 +34,15 @@ fn test_parse() {
     let templates = Rc::new(RefCell::new(HashMap::new()));
     let formatter = Rc::new(get_default_formatter());
 
-    let msg = Message::read_args(
-        &mut Cursor::new(template_bytes.as_slice()),
-        (templates.clone(), formatter.clone()),
-    )
-    .unwrap();
+    let msg = parse_ipfix_message(template_bytes, templates.clone(), formatter.clone()).unwrap();
     assert_eq!(msg.sets.len(), 1);
     assert_eq!(templates.borrow().len(), 3);
     assert!(templates.borrow().contains_key(&500));
     assert!(templates.borrow().contains_key(&999));
     assert!(templates.borrow().contains_key(&501));
-    assert!(Message::read_args(
-        &mut Cursor::new(template_bytes.as_slice()),
-        (templates.clone(), formatter.clone()),
-    )
-    .is_ok());
+    assert!(parse_ipfix_message(template_bytes, templates.clone(), formatter.clone(),).is_ok());
 
-    let data_message = Message::read_args(
-        &mut Cursor::new(data_bytes.as_slice()),
-        (templates, formatter.clone()),
-    )
-    .unwrap();
+    let data_message = parse_ipfix_message(data_bytes, templates, formatter.clone()).unwrap();
     let datarecords: Vec<&DataRecord> = data_message.iter_data_records().collect();
     assert_eq!(datarecords.len(), 21);
 
@@ -99,16 +86,8 @@ fn test_parse_template_enterprise_fields() {
     let templates = Rc::new(RefCell::new(HashMap::new()));
     let formatter = Rc::new(get_default_formatter());
 
-    let _ = Message::read_args(
-        &mut Cursor::new(temp_1.as_slice()),
-        (templates.clone(), formatter.clone()),
-    )
-    .unwrap();
-    let _ = Message::read_args(
-        &mut Cursor::new(temp_2.as_slice()),
-        (templates.clone(), formatter.clone()),
-    )
-    .unwrap();
+    let _ = parse_ipfix_message(temp_1, templates.clone(), formatter.clone()).unwrap();
+    let _ = parse_ipfix_message(temp_2, templates.clone(), formatter.clone()).unwrap();
     // sum the number of parsed enterprise fields
     let enterprise_fields = templates
         .borrow()
@@ -183,22 +162,10 @@ fn test_parse_data_variable_fields() {
     });
     let formatter = Rc::new(formatter);
 
-    assert!(Message::read_args(
-        &mut Cursor::new(temp_1.as_slice()),
-        (templates.clone(), formatter.clone())
-    )
-    .is_ok());
-    assert!(Message::read_args(
-        &mut Cursor::new(temp_2.as_slice()),
-        (templates.clone(), formatter.clone())
-    )
-    .is_ok());
+    assert!(parse_ipfix_message(temp_1, templates.clone(), formatter.clone()).is_ok());
+    assert!(parse_ipfix_message(temp_2, templates.clone(), formatter.clone()).is_ok());
 
-    let dns = Message::read_args(
-        &mut Cursor::new(d1.as_slice()),
-        (templates.clone(), formatter.clone()),
-    )
-    .unwrap();
+    let dns = parse_ipfix_message(d1, templates.clone(), formatter.clone()).unwrap();
     println!("{dns:#?}");
     let records: Vec<&DataRecord> = dns.iter_data_records().collect();
     assert!(!records.is_empty());
@@ -212,11 +179,7 @@ fn test_parse_data_variable_fields() {
     }
 
     // http
-    let http = Message::read_args(
-        &mut Cursor::new(d2.as_slice()),
-        (templates, formatter.clone()),
-    )
-    .unwrap();
+    let http = parse_ipfix_message(d2, templates, formatter.clone()).unwrap();
     let records: Vec<&DataRecord> = http.iter_data_records().collect();
     assert!(!records.is_empty());
     let record = records[0];
@@ -240,10 +203,7 @@ fn concurrency() {
         // contains templates 500, 999, 501
         let template_bytes = include_bytes!("../resources/tests/parse_temp.bin");
         let formatter = Rc::new(get_default_formatter());
-        let _m = Message::read_args(
-            &mut Cursor::new(template_bytes.as_slice()),
-            (Rc::new(t1), formatter.clone()),
-        );
+        let _m = parse_ipfix_message(template_bytes, Rc::new(t1), formatter.clone());
     });
 
     // Second thread to parse data set
@@ -252,10 +212,7 @@ fn concurrency() {
         // contains data sets for templates 999, 500, 999
         let data_bytes = include_bytes!("../resources/tests/parse_data.bin");
         let formatter = Rc::new(get_default_formatter());
-        let _m = Message::read_args(
-            &mut Cursor::new(data_bytes.as_slice()),
-            (Rc::new(t2), formatter.clone()),
-        );
+        let _m = parse_ipfix_message(data_bytes, Rc::new(t2), formatter.clone());
     });
 
     let _r1 = j1.join();

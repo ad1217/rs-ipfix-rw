@@ -3,11 +3,11 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use ahash::{HashMap, HashMapExt};
-use binrw::{BinRead, BinWrite};
+use binrw::BinWrite;
+use ipfixrw::parse_ipfix_message;
 use test_case::test_case;
 
 use ipfixrw::information_elements::get_default_formatter;
-use ipfixrw::parser::Message;
 
 #[test_case(&["parse_temp.bin", "parse_data.bin"], 1; "parse sample")]
 #[test_case(&["parse_temp_1.bin", "dns_samp.bin"], 4; "nprobe dns sample")]
@@ -22,10 +22,7 @@ fn test_round_trip(filenames: &[&'static str], alignment: u8) -> binrw::BinResul
             .collect();
         let file_bytes = std::fs::read(path)?;
 
-        let msg = Message::read_args(
-            &mut Cursor::new(file_bytes.as_slice()),
-            (templates.clone(), formatter.clone()),
-        )?;
+        let msg = parse_ipfix_message(&file_bytes, templates.clone(), formatter.clone())?;
         let mut writer = Cursor::new(Vec::new());
         msg.write_args(
             &mut writer,

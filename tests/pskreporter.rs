@@ -9,6 +9,7 @@ use test_case::test_case;
 use ipfixrw::{
     data_record,
     information_elements::{get_default_formatter, Formatter},
+    parse_ipfix_message,
     parser::{
         DataRecord, DataRecordKey, DataRecordType, DataRecordValue, FieldSpecifier, Message,
         OptionsTemplateRecord, Records, Set, TemplateRecord,
@@ -294,17 +295,13 @@ fn test_full_examples() -> BinResult<()> {
     let templates = Rc::new(RefCell::new(HashMap::new()));
     let formatter = Rc::new(pskreporter_formatter());
 
-    let full_message = Message::read_args(
-        &mut Cursor::new(full_packet_bytes.as_slice()),
-        (templates.clone(), formatter.clone()),
-    )?;
+    let full_message =
+        parse_ipfix_message(&full_packet_bytes, templates.clone(), formatter.clone())?;
 
     similar_asserts::assert_eq!(expected: expected_full_message, actual: full_message);
 
-    let data_only_message = Message::read_args(
-        &mut Cursor::new(data_only_packet_bytes.as_slice()),
-        (templates, formatter.clone()),
-    )?;
+    let data_only_message =
+        parse_ipfix_message(&data_only_packet_bytes, templates, formatter.clone())?;
 
     similar_asserts::assert_eq!(
         expected: expected_data_only_message,
