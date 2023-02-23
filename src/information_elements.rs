@@ -1,6 +1,6 @@
 use ahash::HashMap;
 
-use crate::DataRecordType;
+use crate::parser::DataRecordType;
 
 /// mapping of (enterprise_number, information_element_identifier) -> (name, type)
 pub type Formatter = HashMap<(u32, u16), (&'static str, DataRecordType)>;

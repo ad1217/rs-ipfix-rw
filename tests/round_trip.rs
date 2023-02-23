@@ -7,7 +7,7 @@ use binrw::{BinRead, BinWrite};
 use test_case::test_case;
 
 use ipfixrw::information_elements::get_default_formatter;
-use ipfixrw::Message;
+use ipfixrw::parser::Message;
 
 #[test_case(&["parse_temp.bin", "parse_data.bin"], 1; "parse sample")]
 #[test_case(&["parse_temp_1.bin", "dns_samp.bin"], 4; "nprobe dns sample")]

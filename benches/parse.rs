@@ -8,7 +8,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use pprof::criterion::PProfProfiler;
 
 use ipfixrw::information_elements::get_default_formatter;
-use ipfixrw::Message;
+use ipfixrw::parser::Message;
 
 fn parse_data_with_template(c: &mut Criterion) {
     // contains templates 500, 999, 501

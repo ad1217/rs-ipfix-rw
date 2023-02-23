@@ -7,8 +7,10 @@ use std::{
 use ahash::HashMap;
 
 use crate::{
-    information_elements::Formatter, DataRecordKey, DataRecordType, FieldSpecifier, OptionsTemplateRecord,
-    TemplateRecord,
+    information_elements::Formatter,
+    parser::{
+        DataRecordKey, DataRecordType, FieldSpecifier, OptionsTemplateRecord, TemplateRecord,
+    },
 };
 
 #[derive(Clone, Debug)]

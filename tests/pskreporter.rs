@@ -9,8 +9,10 @@ use test_case::test_case;
 use ipfixrw::{
     data_record,
     information_elements::{get_default_formatter, Formatter},
-    DataRecord, DataRecordKey, DataRecordType, DataRecordValue, FieldSpecifier, Message,
-    OptionsTemplateRecord, Records, Set, TemplateRecord,
+    parser::{
+        DataRecord, DataRecordKey, DataRecordType, DataRecordValue, FieldSpecifier, Message,
+        OptionsTemplateRecord, Records, Set, TemplateRecord,
+    },
 };
 
 // receiver information templates

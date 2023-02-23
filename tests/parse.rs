@@ -8,8 +8,8 @@ use ahash::{HashMap, HashMapExt};
 use binrw::BinRead;
 
 use ipfixrw::information_elements::get_default_formatter;
+use ipfixrw::parser::{DataRecord, DataRecordKey, DataRecordType, DataRecordValue, Message};
 use ipfixrw::template_store::Template;
-use ipfixrw::{DataRecord, DataRecordKey, DataRecordType, DataRecordValue, Message};
 
 // shall not cause infinite loop
 #[test]
