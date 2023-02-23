@@ -12,10 +12,10 @@ use binrw::{
     until_eof, BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, Endian,
 };
 
-pub mod properties;
+pub mod information_elements;
 pub mod template_store;
 mod util;
-use crate::properties::Formatter;
+use crate::information_elements::Formatter;
 use crate::template_store::{Template, TemplateStore};
 use crate::util::{stream_position, until_limit, write_position_at};
 

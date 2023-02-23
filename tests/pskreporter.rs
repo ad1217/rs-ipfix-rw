@@ -8,7 +8,7 @@ use test_case::test_case;
 
 use ipfixrw::{
     data_record,
-    properties::{get_default_formatter, Formatter},
+    information_elements::{get_default_formatter, Formatter},
     DataRecord, DataRecordKey, DataRecordType, DataRecordValue, FieldSpecifier, Message,
     OptionsTemplateRecord, Records, Set, TemplateRecord,
 };

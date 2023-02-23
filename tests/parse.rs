@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use ahash::{HashMap, HashMapExt};
 use binrw::BinRead;
 
-use ipfixrw::properties::get_default_formatter;
+use ipfixrw::information_elements::get_default_formatter;
 use ipfixrw::template_store::Template;
 use ipfixrw::{DataRecord, DataRecordKey, DataRecordType, DataRecordValue, Message};
 

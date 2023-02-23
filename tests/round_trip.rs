@@ -6,7 +6,7 @@ use ahash::{HashMap, HashMapExt};
 use binrw::{BinRead, BinWrite};
 use test_case::test_case;
 
-use ipfixrw::properties::get_default_formatter;
+use ipfixrw::information_elements::get_default_formatter;
 use ipfixrw::Message;
 
 #[test_case(&["parse_temp.bin", "parse_data.bin"], 1; "parse sample")]

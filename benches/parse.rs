@@ -7,7 +7,7 @@ use binrw::BinRead;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use pprof::criterion::PProfProfiler;
 
-use ipfixrw::properties::get_default_formatter;
+use ipfixrw::information_elements::get_default_formatter;
 use ipfixrw::Message;
 
 fn parse_data_with_template(c: &mut Criterion) {

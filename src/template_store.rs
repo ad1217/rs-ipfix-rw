@@ -7,7 +7,7 @@ use std::{
 use ahash::HashMap;
 
 use crate::{
-    properties::Formatter, DataRecordKey, DataRecordType, FieldSpecifier, OptionsTemplateRecord,
+    information_elements::Formatter, DataRecordKey, DataRecordType, FieldSpecifier, OptionsTemplateRecord,
     TemplateRecord,
 };
 
