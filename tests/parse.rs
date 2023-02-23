@@ -53,7 +53,7 @@ fn test_parse() {
 
     let data_message = Message::read_args(
         &mut Cursor::new(data_bytes.as_slice()),
-        (templates.clone(), formatter.clone()),
+        (templates, formatter.clone()),
     )
     .unwrap();
     let datarecords: Vec<&DataRecord> = data_message.iter_data_records().collect();
@@ -214,7 +214,7 @@ fn test_parse_data_variable_fields() {
     // http
     let http = Message::read_args(
         &mut Cursor::new(d2.as_slice()),
-        (templates.clone(), formatter.clone()),
+        (templates, formatter.clone()),
     )
     .unwrap();
     let records: Vec<&DataRecord> = http.iter_data_records().collect();

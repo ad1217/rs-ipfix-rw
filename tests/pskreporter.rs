@@ -301,7 +301,7 @@ fn test_full_examples() -> BinResult<()> {
 
     let data_only_message = Message::read_args(
         &mut Cursor::new(data_only_packet_bytes.as_slice()),
-        (templates.clone(), formatter.clone()),
+        (templates, formatter.clone()),
     )?;
 
     similar_asserts::assert_eq!(
