@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Adam Goldsmith <adam@adamgoldsmith.name>"]
 edition = "2021"
 description = "IPFIX reader/writer library"
+repository = "https://github.com/ad1217/rs-ipfix-rw"
 license = "MIT"
 readme = "README.md"
 
