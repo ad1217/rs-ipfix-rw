@@ -4,7 +4,6 @@ use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 use ahash::{HashMap, HashMapExt};
-use binrw::BinRead;
 
 use ipfixrw::information_elements::get_default_formatter;
 use ipfixrw::parse_ipfix_message;
