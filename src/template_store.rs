@@ -1,10 +1,9 @@
 use std::{
     cell::RefCell,
+    collections::HashMap,
     rc::Rc,
     sync::{Arc, RwLock},
 };
-
-use ahash::HashMap;
 
 use crate::{
     information_elements::Formatter,
@@ -96,7 +95,7 @@ pub trait TemplateStorage: std::fmt::Debug {
     }
 }
 
-impl TemplateStorage for RefCell<HashMap<u16, Template>> {
+impl<S: ::std::hash::BuildHasher> TemplateStorage for RefCell<HashMap<u16, Template, S>> {
     fn get_template(&self, template_id: u16) -> Option<Template> {
         self.borrow().get(&template_id).cloned()
     }
@@ -105,7 +104,7 @@ impl TemplateStorage for RefCell<HashMap<u16, Template>> {
     }
 }
 
-impl TemplateStorage for Arc<RwLock<HashMap<u16, Template>>> {
+impl<S: ::std::hash::BuildHasher> TemplateStorage for Arc<RwLock<HashMap<u16, Template, S>>> {
     fn get_template(&self, template_id: u16) -> Option<Template> {
         self.read().unwrap().get(&template_id).cloned()
     }
