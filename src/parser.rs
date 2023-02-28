@@ -16,6 +16,27 @@ use crate::information_elements::Formatter;
 use crate::template_store::{Template, TemplateStore};
 use crate::util::{stream_position, until_limit, write_position_at};
 
+#[derive(derive_more::Display, Debug)]
+pub enum IpfixError {
+    #[display(fmt = "Missing Template")]
+    MissingTemplate(u16),
+    #[display(fmt = "Missing Data: {_0:?}")]
+    MissingData(DataRecordKey),
+    #[display(fmt = "Invalid Length for Field Spec: {ty:?}, {length}")]
+    InvalidFieldSpecLength { ty: DataRecordType, length: u16 },
+}
+
+impl std::error::Error for IpfixError {}
+
+impl IpfixError {
+    pub(crate) fn into_binrw_error(self, pos: u64) -> binrw::Error {
+        binrw::Error::Custom {
+            pos,
+            err: Box::new(self),
+        }
+    }
+}
+
 /// <https://www.rfc-editor.org/rfc/rfc7011#section-3.1>
 #[binrw]
 #[brw(big, magic = 10u16)]
@@ -225,12 +246,9 @@ impl BinRead for DataRecord {
         endian: Endian,
         (set_id, templates): Self::Args<'_>,
     ) -> BinResult<Self> {
-        let template = templates
-            .get_template(set_id)
-            .ok_or(binrw::Error::AssertFail {
-                pos: reader.stream_position()?,
-                message: format!("Missing template for set id {set_id}"),
-            })?;
+        let template = templates.get_template(set_id).ok_or(
+            IpfixError::MissingTemplate(set_id).into_binrw_error(reader.stream_position()?),
+        )?;
 
         // TODO: should these be handled differently?
         let field_specifiers = match template {
@@ -258,12 +276,9 @@ impl BinWrite for DataRecord {
         endian: Endian,
         (set_id, templates): Self::Args<'_>,
     ) -> BinResult<()> {
-        let template = templates
-            .get_template(set_id)
-            .ok_or(binrw::Error::AssertFail {
-                pos: writer.stream_position()?,
-                message: format!("Missing template for set id {set_id}"),
-            })?;
+        let template = templates.get_template(set_id).ok_or(
+            IpfixError::MissingTemplate(set_id).into_binrw_error(writer.stream_position()?),
+        )?;
 
         let field_specifiers = match template {
             Template::Template(field_specifiers) => field_specifiers,
@@ -273,17 +288,10 @@ impl BinWrite for DataRecord {
         // TODO: should check if all keys are used?
         for field_spec in field_specifiers {
             // TODO: check template type vs actual type?
-            let value = self
-                .values
-                .get(&field_spec.name)
-                // TODO: better error type?
-                .ok_or(binrw::Error::AssertFail {
-                    pos: writer.stream_position()?,
-                    message: format!(
-                        "Field in template missing from data [{:?}]",
-                        field_spec.name
-                    ),
-                })?;
+            let value = self.values.get(&field_spec.name).ok_or(
+                IpfixError::MissingData(field_spec.name)
+                    .into_binrw_error(writer.stream_position()?),
+            )?;
 
             writer.write_type_args(value, endian, (field_spec.field_length,))?;
         }
@@ -442,10 +450,8 @@ impl BinRead for DataRecordValue {
             (DataRecordType::Ipv6Addr, 16) => {
                 DataRecordValue::Ipv6Addr(u128::read_be(reader)?.into())
             }
-            _ => Err(binrw::Error::AssertFail {
-                pos: reader.stream_position()?,
-                message: format!("Invalid type/length pair: {ty:?} {length}"),
-            })?,
+            _ => Err(IpfixError::InvalidFieldSpecLength { ty, length }
+                .into_binrw_error(reader.stream_position()?))?,
         })
     }
 }
