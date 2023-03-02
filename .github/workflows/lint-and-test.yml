@@ -1,0 +1,38 @@
+name: Rust Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy, rustfmt
+      - name: Rustfmt Check
+        uses: actions-rust-lang/rustfmt@v1
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Build documentation
+        run: cargo rustdoc -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Test
+        run: cargo test
